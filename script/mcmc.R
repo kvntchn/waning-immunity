@@ -6,76 +6,64 @@ library(R2jags)
 library(coda)
 
 source('script/compartments.R')
+source('script/initial_values.R')
 san_francisco.dat <- fread("data/san_francisco.csv")
-san_francisco.dat <- san_francisco.dat[-(1:75),]
+san_francisco.dat <- san_francisco.dat[date >= as.Date('2021-06-15')]
 san_francisco.dat[,time := 1:.N]
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Log prior distributions on parameters
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# prior_hyperparameters <- data.frame(
-# 	param = c("R0_high", "R0_low", "R0_omicron",
-# 						"disease_duration", "disease_duration_omicron",
-# 						"death_rate", "vaccination_rate",
-# 						"recovery_period", "recovery_period_omicron",
-# 						"emergence_probability",
-# 						"omicron_date"),
-# 	alpha = c(1.5, 7.5, 30,
-# 						170, 150,
-# 						20, 20,
-# 						30 * 12 / 10, 30 * 10 / 10,
-# 						5e-4 * 1e-2,
-# 						390 * 3
-# 	),
-# 	beta = c(10, 10, 10,
-# 					 10, 10,
-# 					 20000, 20000,
-# 					 1 / 10, 1 / 10,
-# 					 1 * 1e-2, 3)
-# )
-
 prior_hyperparameters <- data.frame(
-	param = c("R0_high", "R0_low", "R0_omicron",
-						"disease_duration", "disease_duration_omicron",
-						"death_rate", "vaccination_rate",
-						"recovery_period", "recovery_period_omicron",
-						"emergence_probability",
-						"omicron_date"),
-	alpha = c(1, 1/100, 1,
-						3, 3,
-						1e-6, 1e-6,
-						1, 1,
-						1e-6,
-						390
-	),
-	beta = c(100, 1, 100,
-					 300, 300,
-					 1e-1, 1e-1,
-					 30 * 12 * 10, 30 * 10 * 10,
-					 5e-2,
-					 410)
+	alpha = c(
+		R0_high = 2.2 * 10,
+		R0_low = 0.7  * 10,
+		disease_duration = 14      * 10,
+		recovery_period = 30 * 12  * 10,
+		immune_period = 30 * 12    * 10,
+		tighten_factor1 = 300  * 1,
+		tighten_factor2 = 65  * 1,
+		tighten_factor3 = 120  * 1,
+		tighten_factor4 = 220  * 1,
+		loosen_factor1 = 15  * 1,
+		loosen_factor2 = 12  * 1,
+		loosen_factor3 = 2  * 1,
+		loosen_factor4 = 12  * 1,
+	NULL),
+	beta = c(
+		R0_high = 10,
+		R0_low = 10,
+		disease_duration = 10,
+		recovery_period = 10,
+		immune_period   = 10,
+		tighten_factor1 = 1,
+		tighten_factor2 = 1,
+		tighten_factor3 = 1,
+		tighten_factor4 = 1,
+		loosen_factor1  = 1,
+		loosen_factor2 = 1,
+		loosen_factor3 = 1,
+		loosen_factor4 = 1,
+	NULL)
 )
+prior_hyperparameters$param <- rownames(prior_hyperparameters)
 
 log_prior_theta <- function(theta = parameters, hyperparam = prior_hyperparameters) {
-	prior_prob <- sapply(names(theta), function(x) {
-		dunif(theta[[x]],
-					with(hyperparam, alpha[param == x]),
-					with(hyperparam, beta[param == x]),
-					log = T)
+	prior_prob <- sapply(hyperparam$param, function(x) {
+		dgamma(theta[[x]],
+					 with(hyperparam, alpha[param == x]),
+					 with(hyperparam, beta[param == x]),
+					 log = T)
 	})
-	return(with(prior_prob,
-							R0_high + R0_low + R0_omicron +
-								disease_duration + disease_duration_omicron +
-								death_rate + vaccination_rate +
-								recovery_period + recovery_period_omicron +
-								emergence_probability + omicron_date
-	)
-	)}
+	return(sum(unlist(prior_prob)))
+}
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Log likelihood for trajectory
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 log_lik_traj <- function(times, data, theta_proposed, initial_state) {
+	# Solve ODE
+	R0 <<- 0
 	traj <- data.frame(quietly(ode)(
 		y = initial_state,
 		times = times,
@@ -83,8 +71,15 @@ log_lik_traj <- function(times, data, theta_proposed, initial_state) {
 		func = compartmental_model,
 		method = "lsode"
 	)$result)
-	model <- traj$I_wt + traj$I_r + traj$I_rV
-	return(sum(dpois(data, model[1:length(data)], log = T)))
+	rm(list = c('n_to_r', 'n_to_wt', 'R0'), envir = .GlobalEnv)
+	# Compute incidence
+	beta <- get_beta(traj, theta_proposed)
+	incidence <- beta * with(
+		traj,
+		S * (I_wt + I_r + I_rV) + V * (I_r + I_rV))
+	# # Compute vaccinated
+	vaccinated <- traj$V * theta_proposed[["vaccination_rate"]]
+	return(sum(dpois(data$cases, incidence[1:nrow(data)], log = T)))
 }
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -111,18 +106,10 @@ log_post <- function(times, data, parameters, initial_state) {
 # Wrapper
 log_post_wrapper <- function(theta_proposed) {
 	return(
-		log_post(times = seq(from = 0, to = 930, by = theta_proposed[['dt']]),
-						 data = san_francisco.dat$cases,
+		log_post(times = seq(from = 1, to = 603, by = theta_proposed[['dt']]),
+						 data = san_francisco.dat[,.(cases, deaths, fully_vaccinated)],
 						 parameters = theta_proposed,
-						 initial_state = c(
-						 	S = N - 30,
-						 	I_wt = 30,
-						 	I_r = 0,
-						 	I_rV = 0,
-						 	R = 0,
-						 	RV = 0,
-						 	D = 0,
-						 	V = 0)
+						 initial_state = get('initial_state', .GlobalEnv)
 		))
 }
 
@@ -145,7 +132,8 @@ mh_mcmc <- function(posterior, init, proposal_sd, num_iter, quiet = T, progress 
 		current_accepted <- 0
 		# Draw a new theta from a Gaussian proposal distribution and
 		# assign this to a variable called theta_proposed.
-		theta_proposed <- rnorm(n = length(theta_current),
+		theta_proposed <- rnorm(
+			n = length(theta_current),
 														mean = theta_current,
 														sd = proposal_sd)
 		names(theta_proposed) <- names(init)
@@ -172,9 +160,12 @@ mh_mcmc <- function(posterior, init, proposal_sd, num_iter, quiet = T, progress 
 			if (i %% 500 == 0 | current_accepted == 1) {
 				# Print the current state of chain and acceptance rate.
 				cat("Iteration:", sprintf('% 5d', i),
-						"\tChain:", theta_current[-which(proposal_sd == 0)],
+						"\tCurrent:", theta_current[-which(proposal_sd == 0)],
 						"\nAccepted:", c("no", "yes")[current_accepted + 1],
-						"\tAcceptance rate:", round(accepted / i * 100, 2), "%\n")
+						"\tAcceptance count:",
+						paste0(accepted),
+						paste0("(", round(accepted / i * 100, 2), "%)\n")
+						)
 			}}
 		if (progress) {setTxtProgressBar(pb, i)}
 	}
@@ -184,43 +175,18 @@ mh_mcmc <- function(posterior, init, proposal_sd, num_iter, quiet = T, progress 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # RUN Metropolis-Hastings MCMC
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-N <- 8e5
-parameters <- c(
-	# Fixed parameters
-	F_h = N / 2000,
-	R0_previous = -Inf,
-	immune_period = Inf,
-	dt = 1,
-	p_non_vax = 0.2,
-	saturation = 0.01,
-	# Random parameters
-	R0_high = 1.5,
-	R0_low = 0.75,
-	R0_omicron = 3,
-	disease_duration = 17,
-	disease_duration_omicron = 15,
-	death_rate = 1 / 1000,
-	vaccination_rate = 1 / 1000,
-	recovery_period = 30 * 12,
-	recovery_period_omicron = 30 * 10,
-	emergence_probability = 5e-4,
-	omicron_date = 390)
-
-init <- parameters
-
-set.seed(230)
+set.seed(223)
 mcmc_trace <- mh_mcmc(
 	posterior = log_post_wrapper,
-	init = init,
-	proposal_sd = c(
-		rep(0, 6),
-		sqrt((prior_hyperparameters$beta - prior_hyperparameters$alpha)^2 / 12) / 100
-	),
-	num_iter = 5e4,
+	init = parameters,
+	# init = c(parameters[!names(parameters) %in% c("R0_high", "R0_low")],
+					 # parameters[c("R0_high", "R0_low")]),
+	proposal_sd = c(rep(0, 6), sqrt(with(prior_hyperparameters, alpha/beta^2)) / 6e4),
+	num_iter = 5e5,
 	quiet = F,
 	progress = F)
 save(mcmc_trace, file = 'output/mcmc_trace.rdata')
 
-trace <- mcmc(mcmc_trace[,-(1:6)])
+trace <- mcmc(mcmc_trace[,-(1:8)])
 
-plot(mcmc(mcmc_trace[,7:9]))
+plot(mcmc(mcmc_trace[,7:10]))
