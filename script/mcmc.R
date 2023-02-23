@@ -182,7 +182,7 @@ mcmc_trace <- mh_mcmc(
 	# init = c(parameters[!names(parameters) %in% c("R0_high", "R0_low")],
 					 # parameters[c("R0_high", "R0_low")]),
 	proposal_sd = c(rep(0, 6), sqrt(with(prior_hyperparameters, alpha/beta^2)) / 6e4),
-	num_iter = 5e5,
+	num_iter = 1e4,
 	quiet = F,
 	progress = F)
 save(mcmc_trace, file = 'output/mcmc_trace.rdata')
