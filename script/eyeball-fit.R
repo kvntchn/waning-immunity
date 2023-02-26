@@ -28,7 +28,7 @@ trajectory.ode$incidence <- beta * with(
 # The first few entries of the trajectory matrix:
 trajectory.ode %>%
 	ggplot(aes(x = time)) +
-	geom_point(aes(y = incidence), shape = 2) +
+	geom_point(aes(y = incidence), shape = 2, alpha = 0.6, col = 'salmon') +
 	# geom_point(aes(y = I_wt + I_r + I_rV), shape = 2) +
 	geom_point(data = san_francisco.dat,
 						aes(y = cases), size = 1/.pt) +

@@ -28,6 +28,12 @@ compartmental_model <- function(time, state = initial_state, parameters) {
 	loosen_factor2   <- parameters["loosen_factor2"]
 	loosen_factor3   <- parameters["loosen_factor3"]
 	loosen_factor4   <- parameters["loosen_factor4"]
+	# as.integer(as.Date('2021-11-21') - as.Date('2021-06-14'))
+	holiday_date     <- 160.5
+	# as.integer(as.Date('2022-04-15') - as.Date('2021-06-14'))
+	reopening_date   <- 305.5
+	# as.integer(as.Date('2022-07-04') - as.Date('2021-06-14'))
+	summer_date      <- 385
 	h       <- parameters["p_non_vax"]
 	k       <- parameters["saturation"]
 	dt      <- parameters["dt"]
@@ -48,11 +54,14 @@ compartmental_model <- function(time, state = initial_state, parameters) {
 	## Time-varying force of  infection
 	if (time > 0)   {F_h <- N / tighten_factor1; loosen_factor <- loosen_factor1}
 	# time 160 corresponds to 11/21/2021 (Thanksgiving)
-	if (time >= 160) {F_h <- N / tighten_factor2; loosen_factor <- loosen_factor2}
+	if (time >= holiday_date) {
+		F_h <- N / tighten_factor2; loosen_factor <- loosen_factor2}
 	# time 305 corresponds to 04/15/2022 (SF reopening)
-	if (time >= 305) {F_h <- N / tighten_factor3; loosen_factor <- loosen_factor3}
+	if (time >= reopening_date) {
+		F_h <- N / tighten_factor3; loosen_factor <- loosen_factor3}
 	# time 321 corresponds to 05/01/2022 (Warmer weather)
-	if (time >= 410) {F_h <- N / tighten_factor4; loosen_factor <- loosen_factor4}
+	if (time >= summer_date) {
+		F_h <- N / tighten_factor4; loosen_factor <- loosen_factor4}
 	if ((I_wt + I_r + I_rV) > F_h & R0 > R0_low)                   {R0 <<- R0_low}
 	if ((I_wt + I_r + I_rV) < (F_h / loosen_factor) & R0 < R0_high)  {R0 <<- R0_high}
 	beta  <- get('R0', envir = .GlobalEnv) * gamma / N

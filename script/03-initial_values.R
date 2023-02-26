@@ -28,16 +28,25 @@ parameters <- c(
 	dt = 1,
 	# Random parameters
 	R0_high = 2.2,
-	R0_low = 0.7,
+	R0_low = 0.65,
 	disease_duration = 14,
 	recovery_period = 30 * 12,
 	immune_period = 30 * 12,
-	tighten_factor1 = 300,
-	tighten_factor2 = 65,
-	tighten_factor3 = 120,
-	tighten_factor4 = 220,
+	tighten_factor1 = 350,
+	tighten_factor2 = 63,
+	tighten_factor3 = 165,
+	tighten_factor4 = 325,
 	loosen_factor1 = 15,
-	loosen_factor2 = 12,
-	loosen_factor3 = 2,
-	loosen_factor4 = 12
+	loosen_factor2 = 15,
+	loosen_factor3 = 2.5,
+	loosen_factor4 = 17
+	# holiday_date =
+	# 	# 160
+	# 	as.integer(as.Date('2021-11-21') - as.Date('2021-06-14')),
+	# reopening_date =
+	# 	# 305
+	# 	as.integer(as.Date('2022-04-15') - as.Date('2021-06-14')),
+	# summer_date =
+	# 	# 321
+	# 	as.integer(as.Date('2022-05-01') - as.Date('2021-06-14'))
 	)
