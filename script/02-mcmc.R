@@ -33,14 +33,17 @@ log_lik_traj <- function(times, data, theta_proposed, initial_state) {
 		method = "lsode"
 	)$result)
 	rm(list = c('n_to_r', 'n_to_wt', 'R0'), envir = .GlobalEnv)
+	N <- sum(initial_state)
 	# Compute incidence
 	beta <- get_beta(traj, theta_proposed)
 	incidence <- beta * with(
 		traj,
 		S * (I_wt + I_r + I_rV) + V * (I_r + I_rV))
-	# # Compute vaccinated
-	vaccinated <- traj$V * theta_proposed[["vaccination_rate"]]
-	loglik <- dpois(sum(data$cases), sum(incidence[1:nrow(data)]), log = T)
+	# Compute vaccinated
+	# vaccinated <- traj$V * theta_proposed[["vaccination_rate"]]
+	# loglik <- dpois(sum(data$cases), sum(incidence[1:nrow(data)]), log = T)
+	# loglik <- sum( dpois( data$cases, incidence[1:nrow(data)], log = T) )
+	loglik <- dbinom(sum(data$cases), size = N, prob = sum(incidence[1:nrow(data)]) / N, log = T)
 	return(loglik)
 }
 

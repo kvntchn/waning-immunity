@@ -14,7 +14,7 @@ source('script/03-initial_values.R')
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # RUN Metropolis-Hastings MCMC (No emergence)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-prior_mean_no_emergence <- parameters[-(1:9)]
+prior_mean_no_emergence <- parameters[-(1:11)]
 prior_sd_no_emergence   <- c(
 	0.2, 0.1,
 	14,
@@ -31,58 +31,24 @@ prior_hyperparameters <- data.frame(
 # mcmc_trace_no_emergence <- mh_mcmc(
 # 	posterior = log_post_wrapper,
 # 	init = parameters,
-# 	constant_which = 1:6,
+# 	constant_which = 1:11,
 # 	num_iter = 6e4,
 # 	progress = T,
 # 	acceptance_progress = F)
 # save(mcmc_trace_no_emergence, file = 'output/mcmc_trace_no_emergence.rdata')
-# plot(mcmc(mcmc_trace_no_emergence[,-(1:2)][-(1:2e4), -(1:6)]))
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# RUN Metropolis-Hastings MCMC (With emergence)
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-parameters['inv_emergence_probability'] <- 1e2
-parameters['holiday_date']    <- Inf
-parameters['reopening_date']  <- Inf
-parameters['summer_date']     <- Inf
-prior_mean_with_emergence <- parameters[-(1:8)]
-prior_sd_with_emergence   <- c(
-	5e5,
-	0.2, 0.1,
-	14,
-	30 * 6, 30 * 6,
-	500, 100, 500, 500,
-	5, 5, 2, 5)
-prior_hyperparameters_with_emergence <- data.frame(
-	param = names(prior_mean_with_emergence),
-	alpha = prior_mean_with_emergence^2 / prior_sd_with_emergence^2,
-	beta  = prior_mean_with_emergence / prior_sd_with_emergence^2
-)
-
-set.seed(223)
-mcmc_trace_with_emergence <- mh_mcmc(
-	posterior = log_post_wrapper,
-	init = parameters,
-	constant_which = 1:5,
-	hyperparam = prior_hyperparameters_with_emergence,
-	num_iter = 1e3,
-	progress = F,
-	acceptance_progress = F)
-save(mcmc_trace_with_emergence, file = 'output/mcmc_trace_with_emergence.rdata')
-plot(mcmc(mcmc_trace_with_emergence[,-(1:2)][, -(1:5)]))
-plot(mcmc(mcmc_trace_with_emergence[,-(1:2)][-(1:2e4), -(1:5)]))
-
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # ODE using parameter estimates from MCMC
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # load('output/mcmc_trace_no_emergence.rdata')
-mcmc_trace <- as.data.table(mcmc_trace[,-(1:2)][-(1:3e4),])
-mcmc_parameters <- colMeans(mcmc_trace[,-(1:2)])
+# plot(mcmc(mcmc_trace_no_emergence[,-(1:2)][, -(1:11)]))
+# plot(mcmc(mcmc_trace_no_emergence[,-(1:2)][-(1:2e4), -(1:11)]))
+mcmc_trace <- as.data.table(mcmc_trace_no_emergence[,-(1:2)][-(1:3e4),])
+mcmc_parameters <- colMeans(mcmc_trace)
 
 # Initial parameters vs mcmc fit
 data.frame(
-	parameters = parameters,
+	prior_mean = parameters,
 	fitted = mcmc_parameters
 )
 

@@ -14,9 +14,10 @@ san_francisco.dat[,time := 1:.N]
 times <- seq(from = 1, to = 603, by = parameters['dt'])
 R0 <<- 0
 set.seed(222)
-# parameters['emergence_rate'] <- 5e-3
-initial_state["I_r"] <- 50
-# parameters['emergence_date']     <- parameters['holiday_date'] + 20
+# parameters['emergence_rate'] <- 1/10
+# initial_state["I_r"] <- 0
+# parameters['emergence_date']    <- 0
+# parameters['holiday_date'] + 20
 # parameters['holiday_date']    <- Inf
 # parameters['reopening_date']  <- Inf
 # parameters['summer_date']     <- Inf
