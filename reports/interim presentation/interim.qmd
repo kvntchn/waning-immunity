@@ -1,0 +1,50 @@
+---
+title: "Modeling COVID-19 Incidence"
+subtitle: "Interim Presentation for Stat 222 (Spring 2023)"
+format:
+  beamer:
+    slide-level: 1
+    incremental: true
+    keep-tex: true
+latex-output-dir: '..'
+fontsize: 11pt
+urlcolor: violet
+# aspectratio: 169
+header-includes:
+- \setbeamertemplate{itemize items}{\raisebox{0.15\height}{$\vcenter{\hbox{\scalebox{0.5}{\usebeamercolor[fg]{structure} $\blacktriangleright$}}}$}}
+- \usepackage{setspace}\setstretch{1.15}
+- \usepackage{etoolbox}
+  \newcommand{\zerodisplayskips}{
+      \setlength{\abovedisplayskip}{0.25\baselineskip}
+      \setlength{\belowdisplayskip}{0.25\baselineskip}
+      \setlength{\abovedisplayshortskip}{0.15\baselineskip}
+      \setlength{\belowdisplayshortskip}{0.15\baselineskip}}
+  \appto{\normalsize}{\zerodisplayskips}
+  \appto{\small}{\zerodisplayskips}
+  \appto{\footnotesize}{\zerodisplayskips}
+- \setlength{\leftmargini}{4pt}
+- \setlength{\leftmarginii}{12pt}
+- \setbeamertemplate{itemize/enumerate body begin}{\normalsize}
+- \setbeamertemplate{itemize/enumerate subbody begin}{\normalsize}
+- \ifdefined\Shaded\renewenvironment{Shaded}{\small\begin{tcolorbox}[top=2pt, bottom=0pt, borderline west={3pt}{0pt}{shadecolor}, interior hidden, frame hidden, enhanced, boxrule=0pt, sharp corners, breakable]}{\end{tcolorbox}}\fi
+- \usepackage{verbatim}
+- \makeatletter
+  \patchcmd{\@verbatim}{\verbatim@font}{\small\verbatim@font}{}{}
+  \makeatother
+- \ifluatex \usepackage{pgf} \fi
+- \usepackage{tikz}
+- \usetikzlibrary{graphs, arrows, automata, shadings}
+- \tikzset{invisible/.style={opacity=0}, visible
+  on/.style={alt={#1{}{invisible}}}, alt/.code
+  args={<#1>#2#3}{\alt<#1>{\pgfkeysalso{#2}}{\pgfkeysalso{#3}}}}
+- \usepackage{adjustbox}
+execute:
+  freeze: auto
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache = TRUE)
+```
+

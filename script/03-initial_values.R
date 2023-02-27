@@ -22,10 +22,15 @@ initial_state <- c(
 parameters <- c(
 	p_non_vax = 0.2,
 	saturation = 0.01,
-	emergence_probability = 0,
 	vaccination_rate = 250.6335,
 	death_rate = 7.3e-4,
 	dt = 1,
+	stochastic = 0,
+	holiday_date =  160.5, # as.integer(as.Date('2021-11-21') - as.Date('2021-06-14')),
+	reopening_date =  305.5, # as.integer(as.Date('2022-04-15') - as.Date('2021-06-14')),
+	summer_date =  385, # as.integer(as.Date('2022-07-04') - as.Date('2021-06-14'))
+	emergence_date = 161.5, # as.integer(as.Date('2021-11-30') - as.Date('2021-06-14')),
+	emergence_rate = 0,
 	# Random parameters
 	R0_high = 2.2,
 	R0_low = 0.65,
@@ -40,13 +45,4 @@ parameters <- c(
 	loosen_factor2 = 15,
 	loosen_factor3 = 2.5,
 	loosen_factor4 = 17
-	# holiday_date =
-	# 	# 160
-	# 	as.integer(as.Date('2021-11-21') - as.Date('2021-06-14')),
-	# reopening_date =
-	# 	# 305
-	# 	as.integer(as.Date('2022-04-15') - as.Date('2021-06-14')),
-	# summer_date =
-	# 	# 321
-	# 	as.integer(as.Date('2022-05-01') - as.Date('2021-06-14'))
-	)
+)
