@@ -27,14 +27,14 @@ prior_hyperparameters <- data.frame(
 	beta  = prior_mean_no_emergence / prior_sd_no_emergence^2
 )
 
-# set.seed(222)
-# mcmc_trace_no_emergence <- mh_mcmc(
-# 	posterior = log_post_wrapper,
-# 	init = parameters,
-# 	constant_which = 1:11,
-# 	num_iter = 6e4,
-# 	progress = T,
-# 	acceptance_progress = F)
+set.seed(222)
+mcmc_trace_no_emergence <- mh_mcmc(
+	posterior = log_post_wrapper,
+	init = parameters,
+	constant_which = 1:11,
+	num_iter = 6e4,
+	progress = T,
+	acceptance_progress = F)
 # save(mcmc_trace_no_emergence, file = 'output/mcmc_trace_no_emergence.rdata')
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

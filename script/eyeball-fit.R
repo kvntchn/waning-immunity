@@ -40,11 +40,14 @@ trajectory.ode$incidence_r <- beta * with(
 # The first few entries of the trajectory matrix:
 trajectory.ode %>%
 	ggplot(aes(x = time)) +
-	geom_point(aes(y = incidence, col = "Total"), shape = 2, alpha = 0.6) +
-	geom_point(aes(y = incidence_wt, col = "WT"), shape = 2, alpha = 0.6) +
-	geom_point(aes(y = incidence_r, col = "R"), shape = 2, alpha = 0.6) +
-	# geom_point(aes(y = I_wt + I_r + I_rV), shape = 2) +
+	geom_path(aes(y = incidence, col = "Total"), shape = 2, alpha = 0.6) +
+	geom_path(aes(y = incidence_wt, col = "WT"), shape = 2, alpha = 0.6) +
+	geom_path(aes(y = incidence_r, col = "R"), shape = 2, alpha = 0.6) +
+	# geom_path(aes(y = I_wt + I_r + I_rV), shape = 2) +
+	# geom_point(data = san_francisco.dat,
+	# 					 aes(y = cases), size = 1/.pt) +
 	geom_point(data = san_francisco.dat,
-						 aes(y = cases), size = 1/.pt) +
-	coord_cartesian(ylim = c(0, 2e3)) +
+						 aes(y = deaths), size = 1/.pt) +
+	# hospitalization rate?
+	coord_cartesian(ylim = c(0, 10)) +
 	theme_bw()

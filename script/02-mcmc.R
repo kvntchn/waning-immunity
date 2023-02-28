@@ -107,7 +107,7 @@ mh_mcmc <- function(
 				(1 - 0.05) * MASS::mvrnorm(
 					1,
 					proposal_mean,
-					2.38^2 / d * cov(samples[1:(i - 1),-constant_which]))
+					2.38^2 / (d) * cov(samples[1:(i - 1),-constant_which]))
 		}
 		names(theta_proposed) <- names(init)
 		# Evaluate the (log) posterior function
