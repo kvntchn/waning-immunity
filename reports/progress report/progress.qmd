@@ -1,0 +1,266 @@
+---
+title: "Progress report"
+author: 
+- name: Kevin Chen
+- name: Zixuan (Niki) Chen
+- name: Lauren Dimaggio
+- name: Jingxuan Fan
+fontsize: 11pt
+header-includes:
+- \usepackage{setspace}\onehalfspacing
+- \setlength{\abovedisplayskip}{4pt}
+- \setlength{\belowdisplayskip}{4pt}
+- \setlength{\abovedisplayshortskip}{1pt}
+- \setlength{\belowdisplayshortskip}{1pt}
+- \ifdefined\Shaded\renewenvironment{Shaded}{
+  \small\begin{tcolorbox}[top=2pt, bottom=0pt, borderline west={3pt}{0pt}{shadecolor},
+  interior hidden, frame hidden, enhanced, boxrule=0pt, sharp corners,
+  breakable]}{\end{tcolorbox}}\fi
+- \usepackage{pgf}\usepackage{pgfplots}\usepackage{tikz}
+- \usetikzlibrary{graphs, arrows, automata, shadings}
+- \setlength{\floatsep}{0pt}
+- \usepackage{enumitem}\setlist[enumerate]{leftmargin=*}
+- \usepackage{verbatim}
+- \makeatletter
+  \patchcmd{\@verbatim}{\verbatim@font}{\singlespacing\small\verbatim@font}{}{}
+latex-output-dir: '..'
+format:
+  pdf:
+    documentclass: scrartcl
+    geometry: margin=2.4cm, footskip=1cm
+    keep-tex: true
+execute:
+  freeze: auto
+editor_options: 
+  chunk_output_type: inline
+bibliography: ../../references/capstone.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T,
+                      fig.align = "center",
+                      fig.width = 4,
+                      fig.height = 3)
+library(data.table)
+library(ggplot2)
+```
+
+All script used to download and clean the data, conduct analyses, produce output, and prepare documents may be found on our GitHub repository [here](https://github.berkeley.edu/kevchen/capstone-epi). The repository is organized into five main directories, whose contents reflect their names:
+
+- `data` contains raw data as well as cleaned subsets
+- `output` contains descriptive, analytic, and diagnostic results as well as intermediate objects produced over the course of work
+- `references` contains scientific/statistical/technical literature as well as a BibTeX file enumerating them
+- `reports` contains prepared documents for human consumption and the script used to prepare them
+- `script` contains the programming script for all main tasks.
+
+The present document describes some of the work done to-date.
+
+# Downloading and cleaning data
+
+Data were downloaded directly from the California Health and Human Services (CalHHS) [Open Data Portal](https://data.chhs.ca.gov). Two main datasets were used: (1) [Statewide COVID-19 Cases Deaths Tests](https://data.chhs.ca.gov/dataset/covid-19-time-series-metrics-by-county-and-state) and (2) [Statewide COVID-19 Vaccines Administered by County](https://data.chhs.ca.gov/dataset/vaccine-progress-dashboard) vaccination counts over time. Both datasets contain daily time series stratified by county. The script for downloading the data are saved in file `script/download_data.R` and reproduced below.
+
+```{r, file='../../script/download_data.R', eval=F}
+```
+
+Since the total data are small and clean, minimal processing was required. We limited the data to days on or after June 15, 2021 to restrict the analytic problem to the period of time when vaccines were widely available. The main workhorses for our analysis will be the daily new case, death, and vaccination counts. While death and vaccination counts should be accurate (difficult to mis-classify a death and vaccination requires billing), the case counts may be vulnerable to changes in reporting and testing. In the next several weeks, we will explore the use of hospitalization rates, test counts, and test positivity to construct a more accurate measure of the true case count.
+
+# Basic visualization
+
+A plot of the daily case counts stratified by county is presented below. Note that for almost all of the counties that experienced at least $10\,000$ cases over the course of available data, there were 4-5 outbreak cycles where the case count underwent exponential growth before rapidly switching to exponential decay with what appears to be a sudden change in the velocity. Case count plots for the major counties of Alameda, San Francisco, Sacramento, Los Angeles, San Diego, and Fresno are highlighted in their own plot. Despite the differences in the magnitude of the peaks in the epidemiologic trajectories, the overall shape of the curves is subjectively similar. The ways in which these cycles can be represented as parameters of a compartmental model are discussed below. 
+
+```{r, fig.height=7, fig.width=6.5, warning=F, echo=F}
+cases.dat <- fread('../../data/cases.csv')
+cases.dat[,total_cases := max(cumulative_cases), area]
+cases.dat <- cases.dat[total_cases >= 10000 & date >= as.Date("2021-06-15")]
+cases.dat |> ggplot(aes(x = date, y = cases)) +
+	geom_path(linewidth = 0.1 / .pt) +
+	facet_wrap(. ~ area, scales = 'free') +
+	theme_bw() + theme(
+		axis.text = element_blank(),
+		axis.ticks = element_blank(),
+		strip.text = element_text(size = 6))
+```
+```{r, fig.height=4, fig.width=6.5, warning=F, echo=F}
+focus_areas <- c("Alameda", "San francisco", "Sacramento",
+								 "Los Angeles", "San Diego", "Fresno")
+cases.dat[area %in% focus_areas] |>
+	ggplot(aes(x = date, y = cases)) +
+	geom_path(linewidth = 0.5 / .pt) +
+	facet_wrap(. ~ area, scales = 'free') +
+	theme_bw() + theme(strip.text = element_text(size = 8))
+```
+
+# Basic epidemiologic principles and compartmental modeling.
+
+The study of disease distributions and infectious disease transmission have long be central to public health research and practice. Before the wide acceptance of germ theory, early epidemiologists such as John Snow identified causes of health and disease by analyzing binary contrasts in exposure status without a clear model of the biological manifestation of those exposures [@Vinten-Johansen_2003]. By the 1910s, physicians and researchers became comfortable with the notion of the _natural history of disease_ ie the progression of a disease process in an individual over time. The most basic conceptualization of the natural history of an infectious disease is an individual's progression from susceptibility to infected and finally, recovery. This model forms the basis for one of the simplest of compartmental models used for modeling disease trajectory in a population: the $SIR$ model [@Harko_2014]. The flow of individuals through the states in a closed population is modeled as systems of ordinary differential equations:
+$$\left\{
+\begin{aligned}
+\frac{d}{dt} S & = - \frac{\beta}{N} I S \\
+\frac{d}{dt} I & = \frac{\beta}{N} I S  -  \gamma I \\
+\frac{d}{dt} R & = \gamma I
+\end{aligned}
+\right.$$
+
+This approach gives rise to parameters that are convenient for both estimation and interpretation. The transmission parameter $\beta$ and the force of infection $\gamma$ represent rates of change of the $S$ and $I$ states respectively. The transmission parameter and the force of infection are related through a constant $R_0$ such that $\beta = R_0 \times \gamma$ where $R_0$ may be interpreted as the average number of new cases (infections) that arise from contact with a case. This parameter is known as the basic reproduction number.
+
+\begin{figure}[H]
+\caption{$SIR$ model.}
+\begin{center}
+\begin{tikzpicture}[>= stealth, shorten >= 0pt,
+                    auto, node distance=2.5cm, semithick]
+\tikzstyle{every state}=[shape=rectangle, draw=black, 
+                    semithick, inner sep=1pt, minimum size=1cm]
+  \node[state] (S) {$S$};
+  \node[state] (I) [right of=S] {$I$};
+  \node[state] (R)   [right of=I] {$R$};
+  \path[->]    (S) edge node {$\beta$} (I);
+  \path[->]    (I) edge node {$\gamma$} (R);
+\end{tikzpicture}
+\end{center}
+\end{figure}
+
+# Solutions at analyst-defined parameter values
+
+Well known extensions of the $SIR$ model include $SIRS$, $SEIR$ and $SEIRS$ [@Vynnycky_2010, p. 16]. One extension presented by @Rella_2021 included five additional compartments to account for vaccination, transmission of a vaccine-resistant strain, and death. Under that compartmental model, emergence of a vaccine-resistant strain was governed by a rate parameter $p$, which served as a rate parameter for the instantaneous emergence of a vaccine-resistant strain among those infected with a wild type (non-resistant) strain. Note that setting $p = 0$ results in a four compartment $SIRD$ model with an additional compartment $V$ for vaccination. Below, we present the ordinary differential equations for the model presented by @Rella_2021, but further extended to allow for flow from the vaccinated compartment back into the susceptible compartment with rate $\omega$. Note that here, we take $\beta \times N$ to be the transmission parameter.
+
+$$\left\{
+\begin{aligned}
+\frac{d}{dt}  S 
+		& = \mu R + \omega V - \theta S - \beta (I_{wt} + I_r + I_{r}^V)  S \\
+\frac{d}{dt}  I_{wt} 
+		& = - (\gamma + \delta)  I_{wt} + \beta  S  (I_{wt}) \\
+\frac{d}{dt}  I_r
+		& = - (\gamma + \delta)  I_r  + \beta  S  (I_r + I_r^V) \\
+\frac{d}{dt}  I_r^V
+		& = - (\gamma + \delta)  I_r^V + \beta  V  (I_r + I_r^V) \\
+\frac{d}{dt}  R
+		& = - \mu  R - \theta  R + \gamma  (I_{wt} + I_r) \\
+\frac{d}{dt}  R^V
+		& = - \mu  R^V + \theta  R + \gamma  I_r^V \\ 
+\frac{d}{dt}  D
+		& = \delta  (I_{wt} + I_r + I_r^V) \\
+\frac{d}{dt}  V
+    & = \mu  R^V + \theta  S - \beta  V + (I_r + I_r^V) - \omega V
+\end{aligned}
+\right.$$
+
+\begin{figure}[h]
+\caption{Compartmental model of Rella et alia (2021), extended to allow vaccinated individuals to return to being susceptible.}
+\begin{center}
+\begin{tikzpicture}[>= stealth, shorten >= 0pt,
+                    auto, node distance=4.5cm, semithick]
+\tikzstyle{every state}=[shape=rectangle, draw=black, 
+                    semithick, inner sep=1pt, minimum size=1cm]
+  \node[state] (S) {$S$};
+  \node[state] (Iwt) [right of=S] {$I_{wt}$};
+  \node[state] (R)   [right of=Iwt] {$R$};
+  \node[state] (Ir)  [below right of=S, node distance=3cm, xshift=1.25cm] {$I_r$};
+  \node[state] (D)   [right of=Ir] {$D$};
+  \node[state] (V)   [below of=S, node distance=5cm] {$V$};
+  \node[state] (IrV) [above right of=V, node distance=2.12cm, yshift=0.25cm] {$I_r^V$};
+  \node[state] (RV)  [right of=V, node distance=3cm] {$R^V$};
+  \path[->]    (S)   edge node {$\beta$} (Iwt);
+  \path[->]    (S)   edge node {$\theta$} (V);
+  \path[->]    (Iwt) edge node {$\gamma$} (R);
+  \path[->]    (R)   edge [bend right=30] node [yshift=0.55cm] {$\mu$} (S);
+  \path[->]    (Iwt) edge [bend right=15] node [yshift=0.25cm,xshift=-0.5cm] {$\delta$} (D);
+  \path[->]    (R)   edge [bend left=55] node {$\theta$} (RV);
+  \path[->]    (RV)  edge node {$\mu$} (V);
+  \path[->]    (V)   edge node {$\beta$} (IrV);
+  \path[->]    (IrV) edge node {$\gamma$} (RV);
+  \path[->]    (IrV) edge [bend right=25] node {$\delta$} (D);
+  \path[->]    (S)   edge node {$\beta$} (Ir);
+  \path[->]    (Ir)  edge [bend right=12] node [yshift=-0.35cm, xshift=-1.2cm] {$\gamma$} (R);
+  \path[->]    (Ir)  edge [bend right=30] node {$\delta$} (D);
+  \path[->]    (Iwt) edge [style=dashed, bend right=5] node [yshift=0.45cm, xshift=-0.4cm] {$p$} (Ir);
+  \path[->]    (V) edge [bend left=30] node {$\omega$} (S);
+\end{tikzpicture}
+\end{center}
+\end{figure}
+
+The waves in the disease trajectory over time may be captured by a time-varying reproduction number. @Rella_2021 defined two basic reproduction numbers, one for exponential growth and one for exponential decay. They theorized that the disease trajectory would begin with a period of exponential growth until the prevalence of disease reaches $F_h$, when the basic reproduction number would switch to one below 1. This period of exponential decay would resume until the prevalence is at the low threshold $F_l$. This conceptualization of the relationship between the transmission parameter and time makes sense because the outbreak cycles do not appear to have smooth second derivatives. Differences in heights of the outbreak cycles may be explained by different thresholds $F_h$ and $F_l$ over different time periods.
+
+# Solutions at analyst-defined parameter values
+
+We encoded the ordinary differential equations described in the previous section in the file `script/01-compartments.R` (and below). In addition to the differential equations wrapped in the function `compartmetal_model()`, we also have helper function `get_beta()`, for computing the time-varying value of the transmission parameter based on the prevalence of disease (sum of the $I$ compartments). The value of the transmission parameter is necessary for predicting new cases on each day:
+$$\text{new cases} = \beta \big(
+S (I_{wt} + I_r + I_r^V) + V (I_r + I_r^V)
+\big)$$
+For San Francisco ($N = 815\,201$), we can plot the solution of the model above given plausible (but arbitrarily specified) parameter values.
+
+| Parameter   | Value                | Interpretation                              |
+|-------------|----------------------|---------------------------------------------|
+|$h$					| 0.2					         | Percent of population without vaccination   |
+|$k$					| 0.01					       | Saturation of vaccination speed             |
+|$p$					|	 0							     | Emergence rate                              |
+|$\theta$			| 250.6335			       | Vaccination rate (vaccines per day)         |
+|$\delta$			| 7.3 $\times$ 10,000  | Death rate (deaths per day)                 |
+|$t_1$        | 160.5								 | Start of second wave (2021-11-21)           |
+|$t_2$        | 305.5								 | Start of third wave (2021-04-15)            |
+|$t_3$        | 385.5								 | Start of fourth wave (2021-07-04)           |
+|${R_0}_h$    | 2.2                  | Basic reproduction number during growth     |
+|${R_0}_l$    | 0.65                 | Basic reproduction number during decay      |
+|$\gamma$     | 1 / 14               | Inverse disease duration (days)             |
+|$\mu$        | 1 / (30 * 12)        | Inverse duration of natural immunity        |
+|$\omega$     | 1 / (30 * 12)        | Inverse duration of vaccine protection      |
+|$h_1$        | 350                  | Maximum inverse prevalence in first wave    |
+|$h_2$        | 63                   | Maximum inverse prevalence in second wave   |
+|$h_3$        | 165                  | Maximum inverse prevalence in third wave    |
+|$h_4$        | 325                  | Maximum inverse prevalence in fourth wave   |
+|$l_1$        | 15                   | Fold reduction required before growth (1st) |
+|$l_2$        | 15                   | Fold reduction required before growth (2nd) |
+|$l_3$        | 2.5                  | Fold reduction required before growth (3rd) |
+|$l_4$        | 17                   | Fold reduction required before growth (4th) |
+
+The script for plotting a deterministic solution with these parameters can be found in `script/eyeball-fit.R` (and below). Such a plot is presented below with the salmon-colored line representing the predicted incidence and the points reprenting the observed new case count.
+
+```{r, echo=F}
+source('../../script/01-compartments.R')
+source('../../script/03-initial_values.R')
+san_francisco.dat <- fread("../../data/san_francisco.csv")
+san_francisco.dat <- san_francisco.dat[date >= as.Date('2021-06-15')]
+san_francisco.dat[,time := 1:.N]
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ODE solution
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+times <- seq(from = 1, to = 603, by = parameters['dt'])
+R0 <<- 0
+trajectory.ode <- as.data.frame(ode(
+	y = initial_state,
+	times = times,
+	parms = parameters,
+	func = compartmental_model,
+	method = "lsode"))
+# rm(list = c('n_to_r', 'n_to_wt', 'R0'))
+
+beta <- get_beta(trajectory.ode, parameters)
+trajectory.ode$incidence <- beta * with(
+	trajectory.ode, S * (I_wt + I_r + I_rV) + V * (I_r + I_rV))
+trajectory.ode$incidence_wt <- beta * with(
+	trajectory.ode, S * I_wt)
+trajectory.ode$incidence_r <- beta * with(
+	trajectory.ode, S * (I_r + I_rV) + V * (I_r + I_rV))
+
+# The first few entries of the trajectory matrix:
+trajectory.ode %>%
+	ggplot(aes(x = time)) +
+	geom_path(aes(y = incidence), col = 'salmon') +
+	geom_point(
+		data = san_francisco.dat,
+		aes(y = cases), size = 1/.pt, alpha = 0.2) +
+	theme_bw()
+```
+
+```{r, file='../../script/01-compartments.R', eval=F}
+```
+
+```{r, file='../../script/03-initial_values.R', eval=F}
+```
+
+```{r, file='../../script/eyeball-fit.R', eval=F}
+```
+
+
+\newpage
+# References

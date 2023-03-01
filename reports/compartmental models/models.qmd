@@ -1,4 +1,10 @@
 ---
+title: "Several compartmental models"
+author: 
+- name: Kevin Chen
+- name: Zixuan (Niki) Chen
+- name: Lauren Dimaggio
+- name: Jingxuan Fan
 fontsize: 11pt
 header-includes:
 # - \usepackage{setspace}\onehalfspacing
@@ -6,7 +12,6 @@ header-includes:
 - \setlength{\belowdisplayskip}{4pt}
 - \setlength{\abovedisplayshortskip}{1pt}
 - \setlength{\belowdisplayshortskip}{1pt}
-- \usepackage{verbatim}
 - \ifdefined\Shaded\renewenvironment{Shaded}{
   \small\begin{tcolorbox}[top=2pt, bottom=0pt, borderline west={3pt}{0pt}{shadecolor},
   interior hidden, frame hidden, enhanced, boxrule=0pt, sharp corners,
@@ -14,6 +19,11 @@ header-includes:
 - \usepackage{pgf}\usepackage{pgfplots}\usepackage{tikz}
 - \usetikzlibrary{graphs, arrows, automata, shadings}
 - \setlength{\floatsep}{0pt}
+- \usepackage{enumitem}\setlist[enumerate]{leftmargin=*}
+- \usepackage{verbatim}
+- \makeatletter
+  \patchcmd{\@verbatim}{\verbatim@font}{\small\verbatim@font}{}{}
+latex-output-dir: '..'
 format:
   pdf:
     documentclass: scrartcl
@@ -31,10 +41,6 @@ knitr::opts_chunk$set(echo = T, cache = TRUE,
                       fig.width = 4,
                       fig.height = 3)
 ```
-
-# Proposal: Vaccine resistance or waning immunity?
-
-### Kevin Chen, Zixuan Chen, Jingxuan Fan
 
 \begin{figure}[H]
 \caption{Compartmental model of Rella et alia (2021), which modeled Covid-19 epidemic dynamics when the emergence of a vaccine-resistant variant is possible.}
