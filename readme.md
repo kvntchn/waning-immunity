@@ -1,7 +1,7 @@
 ---
 title: "Compartmental Modeling of COVID-19"
 subtitle: "Capstone Project in partial satisfaction for the MA in Statistics"
-author: "Kevin Chen, Niki Chen, Lauren Dimaggio, Jinxuan Fan"
+author: "Kevin Chen, Niki Chen, Lauren Di Maggio, Jinxuan Fan"
 date: "February 27, 2023"
 ---
 
