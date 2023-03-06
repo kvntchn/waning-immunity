@@ -4,7 +4,7 @@ subtitle: "Interim Presentation for Stat 222 (Spring 2023)"
 format:
   beamer:
     slide-level: 1
-    incremental: true
+    incremental: false
     keep-tex: true
 latex-output-dir: '..'
 fontsize: 11pt
@@ -31,7 +31,7 @@ header-includes:
 - \makeatletter
   \patchcmd{\@verbatim}{\verbatim@font}{\small\verbatim@font}{}{}
   \makeatother
-- \ifluatex \usepackage{pgf} \fi
+- \usepackage{pgf}
 - \usepackage{tikz}
 - \usetikzlibrary{graphs, arrows, automata, shadings}
 - \tikzset{invisible/.style={opacity=0}, visible
@@ -42,9 +42,135 @@ execute:
   freeze: auto
 editor_options: 
   chunk_output_type: inline
+bibliography: ../../references/capstone.bib
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, cache = TRUE)
 ```
 
+# Background and movitation
+
+- By mid-summer, 2021, vaccination eligibility for COVID-19 was widespread and preventive public health measures were significantly loosened
+- Return to normalcy in the presence of vaccination led to concerns of the emergence of a vaccine-resistant strain
+- In July 2021, @Rella_2021 published simulations of outbreak trajectories under various emergence probabilities
+	- Resistant strains never established during periods of preventive public health measured
+- On November 30, 2021, the first case of the Omicron variant (B.1.1.529) in the US was confirmed [@CDC_2021]
+
+# Insights from @Rella_2021
+
+![Low emergence probaility](resources/Rella_2021_fig1b.png)
+
+# Insights from @Rella_2021
+
+![High emergence probaility](resources/Rella_2021_fig1c.png)
+
+# Basic concepts in infectious disease epidemiology
+
+- _Infectious agent:_ biological causal locus of an infectious disease
+- _Contact:_ interaction between potential hosts and the infectious agent
+- _Infection:_ entry of the infectious agent into the host
+- _Latent period:_ time between infection and infectiousness
+- _Infectious  period:_ the period of time during which contact with hosts means 
+	contact with the infectious agent
+- These periods make up the _natural history timeline_ for infectious disease
+
+# Natural history timeline
+
+\begin{tikzpicture}[>= stealth, shorten >= 0pt,
+                    auto, node distance=2.5cm, semithick]
+\tikzstyle{every state}=[shape=rectangle, draw=none, 
+                    semithick, inner sep=1pt, minimum size=0cm]
+  \node[state] (start) at (0,0) {};
+  \node[state] (end)   at (10.5,0) {};
+  \node[state] (infection)       at (2.5,2.2) [inner sep=5pt] {Infection};
+  \node[state] (infection_point) at (2.5,0) {};
+  \node[state] (susceptible) at (1,1) {Susceptible};
+  \node[state] (latent) at (4,1)
+  							{\begin{tabular}{c}Latent\\period\end{tabular}};
+  \node[state] (infectious) at (6.25,1)
+  							{\begin{tabular}{c}Infectious\\period\end{tabular}};
+  \node[state] (recovered) at(9, 2)
+  							{\begin{tabular}{l}
+  							Non-infectious:\\
+  							$\cdot$ Immune\\ $\cdot$ Dead \\$\cdot$ Recovered \\$\cdot$ Vaccinated
+  							\end{tabular}};
+  \node[state] (Time) [below of=end, node distance=0.5cm, xshift=-0.65cm] {Time};
+  \path[->]    (start) edge (end);
+  \path[->]    (infection) edge (infection_point);
+\end{tikzpicture}
+
+\begin{center}
+\begin{tikzpicture}[>= stealth, shorten >= 0pt,
+                    auto, node distance=2.5cm, semithick]
+\tikzstyle{every state}=[shape=rectangle, draw=black, 
+                    semithick, inner sep=1pt, minimum size=1cm]
+  \node[state] (S) at (1,0) {$S$};
+  \node[state] (I) at (6.25,0) {$I$};
+  \node[state] (R) at (9, 0) {$R$};
+  \node[state] (end) at (10.5, 0) [draw=none, minimum size=0pt] {};
+  \path[->]    (S) edge node {$\beta$} (I);
+  \path[->]    (I) edge node {$\gamma$} (R);
+\end{tikzpicture}
+\end{center}
+
+# Compartmental modeling: simple SIR case
+
+\begin{center}
+\begin{tikzpicture}[>= stealth, shorten >= 0pt,
+                    auto, node distance=2.5cm, semithick]
+\tikzstyle{every state}=[shape=rectangle, draw=black, 
+                    semithick, inner sep=1pt, minimum size=1cm]
+  \node[state] (S) at (1,0) {$S$};
+  \node[state] (I) at (6.25,0) {$I$};
+  \node[state] (R) at (9, 0) {$R$};
+  \node[state] (end) at (10.5, 0) [draw=none, minimum size=0pt] {};
+  \path[->]    (S) edge node {$\beta$} (I);
+  \path[->]    (I) edge node {$\gamma$} (R);
+\end{tikzpicture}
+\end{center}
+
+$$\left\{
+\begin{aligned}
+\frac{d}{dt} S & = - \frac{\beta}{N} I S \\
+\frac{d}{dt} I & = \frac{\beta}{N} I S  -  \gamma I \\
+\frac{d}{dt} R & = \gamma I
+\end{aligned}
+\right.$$
+$$S + I + R = N$$
+
+# Compartmental modeling: theory of @Rella_2021
+
+\begin{center}
+\begin{tikzpicture}[>= stealth, shorten >= 0pt,
+                    auto, node distance=4.5cm, semithick]
+\tikzstyle{every state}=[shape=rectangle, draw=black, 
+                    semithick, inner sep=1pt, minimum size=1cm]
+  \node[state] (S) {$S$};
+  \node[state] (Iwt) [right of=S] {$I_{wt}$};
+  \node[state] (R)   [right of=Iwt] {$R$};
+  \node[state] (Ir)  [below right of=S, node distance=3cm, xshift=1.25cm] {$I_r$};
+  \node[state] (D)   [right of=Ir] {$D$};
+  \node[state] (V)   [below of=S, node distance=5cm] {$V$};
+  \node[state] (IrV) [above right of=V, node distance=2.12cm, yshift=0.25cm] {$I_r^V$};
+  \node[state] (RV)  [right of=V, node distance=3cm] {$R^V$};
+  \path[->]    (S)   edge node {$\beta$} (Iwt);
+  \path[->]    (S)   edge node {$\theta$} (V);
+  \path[->]    (Iwt) edge node {$\gamma$} (R);
+  \path[->]    (R)   edge [bend right=30] node [yshift=0.55cm] {$\mu$} (S);
+  \path[->]    (Iwt) edge [bend right=15] node [yshift=0.25cm,xshift=-0.5cm] {$\delta$} (D);
+  \path[->]    (R)   edge [bend left=55] node {$\theta$} (RV);
+  \path[->]    (RV)  edge node {$\mu$} (V);
+  \path[->]    (V)   edge node {$\beta$} (IrV);
+  \path[->]    (IrV) edge node {$\gamma$} (RV);
+  \path[->]    (IrV) edge [bend right=25] node {$\delta$} (D);
+  \path[->]    (S)   edge node {$\beta$} (Ir);
+  \path[->]    (Ir)  edge [bend right=12] node [yshift=-0.35cm, xshift=-1.2cm] {$\gamma$} (R);
+  \path[->]    (Ir)  edge [bend right=30] node {$\delta$} (D);
+  \path[->]    (Iwt) edge [style=dashed, bend right=5] node [yshift=0.45cm, xshift=-0.4cm] {$p$} (Ir);
+  \path[->]    (V) edge [bend left=30] node {$\omega$} (S);
+\end{tikzpicture}
+\end{center}
+\end{figure}
+
+# References

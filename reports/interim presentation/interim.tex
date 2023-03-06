@@ -101,6 +101,29 @@
 \makeatletter
 \def\fps@figure{htbp}
 \makeatother
+\newlength{\cslhangindent}
+\setlength{\cslhangindent}{1.5em}
+\newlength{\csllabelwidth}
+\setlength{\csllabelwidth}{3em}
+\newlength{\cslentryspacingunit} % times entry-spacing
+\setlength{\cslentryspacingunit}{\parskip}
+\newenvironment{CSLReferences}[2] % #1 hanging-ident, #2 entry spacing
+ {% don't indent paragraphs
+  \setlength{\parindent}{0pt}
+  % turn on hanging indent if param 1 is 1
+  \ifodd #1
+  \let\oldpar\par
+  \def\par{\hangindent=\cslhangindent\oldpar}
+  \fi
+  % set entry spacing
+  \setlength{\parskip}{#2\cslentryspacingunit}
+ }%
+ {}
+\usepackage{calc}
+\newcommand{\CSLBlock}[1]{#1\hfill\break}
+\newcommand{\CSLLeftMargin}[1]{\parbox[t]{\csllabelwidth}{#1}}
+\newcommand{\CSLRightInline}[1]{\parbox[t]{\linewidth - \csllabelwidth}{#1}\break}
+\newcommand{\CSLIndent}[1]{\hspace{\cslhangindent}#1}
 
 \setbeamertemplate{itemize items}{\raisebox{0.15\height}{$\vcenter{\hbox{\scalebox{0.5}{\usebeamercolor[fg]{structure} $\blacktriangleright$}}}$}}
 \usepackage{setspace}\setstretch{1.15}
@@ -112,7 +135,7 @@
 \ifdefined\Shaded\renewenvironment{Shaded}{\small\begin{tcolorbox}[top=2pt, bottom=0pt, borderline west={3pt}{0pt}{shadecolor}, interior hidden, frame hidden, enhanced, boxrule=0pt, sharp corners, breakable]}{\end{tcolorbox}}\fi
 \usepackage{verbatim}
 \makeatletter \patchcmd{\@verbatim}{\verbatim@font}{\small\verbatim@font}{}{} \makeatother
-\ifluatex \usepackage{pgf} \fi
+\usepackage{pgf}
 \usepackage{tikz}
 \usetikzlibrary{graphs, arrows, automata, shadings}
 \tikzset{invisible/.style={opacity=0}, visible on/.style={alt={#1{}{invisible}}}, alt/.code args={<#1>#2#3}{\alt<#1>{\pgfkeysalso{#2}}{\pgfkeysalso{#3}}}}
@@ -190,9 +213,202 @@
 
 \begin{document}
 \frame{\titlepage}
-\ifdefined\Shaded\renewenvironment{Shaded}{\begin{tcolorbox}[interior hidden, breakable, borderline west={3pt}{0pt}{shadecolor}, enhanced, frame hidden, boxrule=0pt, sharp corners]}{\end{tcolorbox}}\fi
+\ifdefined\Shaded\renewenvironment{Shaded}{\begin{tcolorbox}[boxrule=0pt, breakable, borderline west={3pt}{0pt}{shadecolor}, sharp corners, frame hidden, interior hidden, enhanced]}{\end{tcolorbox}}\fi
 
-\begin{frame}
+\begin{frame}{Background and movitation}
+\protect\hypertarget{background-and-movitation}{}
+\begin{itemize}
+\tightlist
+\item
+  By mid-summer, 2021, vaccination eligibility for COVID-19 was
+  widespread and preventive public health measures were significantly
+  loosened
+\item
+  Return to normalcy in the presence of vaccination led to concerns of
+  the emergence of a vaccine-resistant strain
+\item
+  In July 2021, Rella et al. (2021) published simulations of outbreak
+  trajectories under various emergence probabilities
+
+  \begin{itemize}
+  \tightlist
+  \item
+    Resistant strains never established during periods of preventive
+    public health measured
+  \end{itemize}
+\item
+  On November 30, 2021, the first case of the Omicron variant
+  (B.1.1.529) in the US was confirmed (CDC 2021)
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Insights from Rella et al. (2021)}
+\protect\hypertarget{insights-from-rella_2021}{}
+\begin{figure}
+
+{\centering \includegraphics{resources/Rella_2021_fig1b.png}
+
+}
+
+\caption{Low emergence probaility}
+
+\end{figure}
+\end{frame}
+
+\begin{frame}{Insights from Rella et al. (2021)}
+\protect\hypertarget{insights-from-rella_2021-1}{}
+\begin{figure}
+
+{\centering \includegraphics{resources/Rella_2021_fig1c.png}
+
+}
+
+\caption{High emergence probaility}
+
+\end{figure}
+\end{frame}
+
+\begin{frame}{Basic concepts in infectious disease epidemiology}
+\protect\hypertarget{basic-concepts-in-infectious-disease-epidemiology}{}
+\begin{itemize}
+\tightlist
+\item
+  \emph{Infectious agent:} biological causal locus of an infectious
+  disease
+\item
+  \emph{Contact:} interaction between potential hosts and the infectious
+  agent
+\item
+  \emph{Infection:} entry of the infectious agent into the host
+\item
+  \emph{Latent period:} time between infection and infectiousness
+\item
+  \emph{Infectious period:} the period of time during which contact with
+  hosts means contact with the infectious agent
+\item
+  These periods make up the \emph{natural history timeline} for
+  infectious disease
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Natural history timeline}
+\protect\hypertarget{natural-history-timeline}{}
+\begin{tikzpicture}[>= stealth, shorten >= 0pt,
+                    auto, node distance=2.5cm, semithick]
+\tikzstyle{every state}=[shape=rectangle, draw=none, 
+                    semithick, inner sep=1pt, minimum size=0cm]
+  \node[state] (start) at (0,0) {};
+  \node[state] (end)   at (10.5,0) {};
+  \node[state] (infection)       at (2.5,2.2) [inner sep=5pt] {Infection};
+  \node[state] (infection_point) at (2.5,0) {};
+  \node[state] (susceptible) at (1,1) {Susceptible};
+  \node[state] (latent) at (4,1)
+                            {\begin{tabular}{c}Latent\\period\end{tabular}};
+  \node[state] (infectious) at (6.25,1)
+                            {\begin{tabular}{c}Infectious\\period\end{tabular}};
+  \node[state] (recovered) at(9, 2)
+                            {\begin{tabular}{l}
+                            Non-infectious:\\
+                            $\cdot$ Immune\\ $\cdot$ Dead \\$\cdot$ Recovered \\$\cdot$ Vaccinated
+                            \end{tabular}};
+  \node[state] (Time) [below of=end, node distance=0.5cm, xshift=-0.65cm] {Time};
+  \path[->]    (start) edge (end);
+  \path[->]    (infection) edge (infection_point);
+\end{tikzpicture}
+
+\begin{center}
+\begin{tikzpicture}[>= stealth, shorten >= 0pt,
+                    auto, node distance=2.5cm, semithick]
+\tikzstyle{every state}=[shape=rectangle, draw=black, 
+                    semithick, inner sep=1pt, minimum size=1cm]
+  \node[state] (S) at (1,0) {$S$};
+  \node[state] (I) at (6.25,0) {$I$};
+  \node[state] (R) at (9, 0) {$R$};
+  \node[state] (end) at (10.5, 0) [draw=none, minimum size=0pt] {};
+  \path[->]    (S) edge node {$\beta$} (I);
+  \path[->]    (I) edge node {$\gamma$} (R);
+\end{tikzpicture}
+\end{center}
+\end{frame}
+
+\begin{frame}{Compartmental modeling: simple SIR case}
+\protect\hypertarget{compartmental-modeling-simple-sir-case}{}
+\begin{center}
+\begin{tikzpicture}[>= stealth, shorten >= 0pt,
+                    auto, node distance=2.5cm, semithick]
+\tikzstyle{every state}=[shape=rectangle, draw=black, 
+                    semithick, inner sep=1pt, minimum size=1cm]
+  \node[state] (S) at (1,0) {$S$};
+  \node[state] (I) at (6.25,0) {$I$};
+  \node[state] (R) at (9, 0) {$R$};
+  \node[state] (end) at (10.5, 0) [draw=none, minimum size=0pt] {};
+  \path[->]    (S) edge node {$\beta$} (I);
+  \path[->]    (I) edge node {$\gamma$} (R);
+\end{tikzpicture}
+\end{center}
+
+\[\left\{
+\begin{aligned}
+\frac{d}{dt} S & = - \frac{\beta}{N} I S \\
+\frac{d}{dt} I & = \frac{\beta}{N} I S  -  \gamma I \\
+\frac{d}{dt} R & = \gamma I
+\end{aligned}
+\right.\] \[S + I + R = N\]
+\end{frame}
+
+\begin{frame}{Compartmental modeling: theory of Rella et al. (2021)}
+\protect\hypertarget{compartmental-modeling-theory-of-rella_2021}{}
+\begin{center}
+\begin{tikzpicture}[>= stealth, shorten >= 0pt,
+                    auto, node distance=4.5cm, semithick]
+\tikzstyle{every state}=[shape=rectangle, draw=black, 
+                    semithick, inner sep=1pt, minimum size=1cm]
+  \node[state] (S) {$S$};
+  \node[state] (Iwt) [right of=S] {$I_{wt}$};
+  \node[state] (R)   [right of=Iwt] {$R$};
+  \node[state] (Ir)  [below right of=S, node distance=3cm, xshift=1.25cm] {$I_r$};
+  \node[state] (D)   [right of=Ir] {$D$};
+  \node[state] (V)   [below of=S, node distance=5cm] {$V$};
+  \node[state] (IrV) [above right of=V, node distance=2.12cm, yshift=0.25cm] {$I_r^V$};
+  \node[state] (RV)  [right of=V, node distance=3cm] {$R^V$};
+  \path[->]    (S)   edge node {$\beta$} (Iwt);
+  \path[->]    (S)   edge node {$\theta$} (V);
+  \path[->]    (Iwt) edge node {$\gamma$} (R);
+  \path[->]    (R)   edge [bend right=30] node [yshift=0.55cm] {$\mu$} (S);
+  \path[->]    (Iwt) edge [bend right=15] node [yshift=0.25cm,xshift=-0.5cm] {$\delta$} (D);
+  \path[->]    (R)   edge [bend left=55] node {$\theta$} (RV);
+  \path[->]    (RV)  edge node {$\mu$} (V);
+  \path[->]    (V)   edge node {$\beta$} (IrV);
+  \path[->]    (IrV) edge node {$\gamma$} (RV);
+  \path[->]    (IrV) edge [bend right=25] node {$\delta$} (D);
+  \path[->]    (S)   edge node {$\beta$} (Ir);
+  \path[->]    (Ir)  edge [bend right=12] node [yshift=-0.35cm, xshift=-1.2cm] {$\gamma$} (R);
+  \path[->]    (Ir)  edge [bend right=30] node {$\delta$} (D);
+  \path[->]    (Iwt) edge [style=dashed, bend right=5] node [yshift=0.45cm, xshift=-0.4cm] {$p$} (Ir);
+  \path[->]    (V) edge [bend left=30] node {$\omega$} (S);
+\end{tikzpicture}
+\end{center}
+
+\textbackslash end\{figure\}
+\end{frame}
+
+\begin{frame}{References}
+\protect\hypertarget{references}{}
+\hypertarget{refs}{}
+\begin{CSLReferences}{1}{0}
+\leavevmode\vadjust pre{\hypertarget{ref-CDC_2021}{}}%
+CDC. 2021. {``First Confirmed Case of Omicron Variant Detected in the
+United States.''} \emph{First Confirmed Case of Omicron Variant Detected
+in the United States}.
+\url{https://www.cdc.gov/media/releases/2021/s1201-omicron-variant.html}.
+
+\leavevmode\vadjust pre{\hypertarget{ref-Rella_2021}{}}%
+Rella, Simon A, Yuliya A Kulikova, Emmanouil T Dermitzakis, and Fyodor A
+Kondrashov. 2021. {``Rates of SARS-CoV-2 Transmission and Vaccination
+Impact the Fate of Vaccine-Resistant Strains.''} \emph{Scientific
+Reports} 11 (1): 15729.
+
+\end{CSLReferences}
 \end{frame}
 
 
