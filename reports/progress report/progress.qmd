@@ -3,7 +3,7 @@ title: "Progress report"
 author: 
 - name: Kevin Chen
 - name: Zixuan (Niki) Chen
-- name: Lauren Dimaggio
+- name: Lauren Di Maggio
 - name: Jingxuan Fan
 fontsize: 11pt
 header-includes:

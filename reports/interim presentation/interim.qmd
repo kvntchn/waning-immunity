@@ -46,7 +46,47 @@ bibliography: ../../references/capstone.bib
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, cache = TRUE)
+knitr::opts_chunk$set(echo = F, cache = F,
+											fig.width = 3.5, fig.height = 2.75)
+# Save default TikZ options
+tikzLualatexPackages.option <- getOption("tikzLualatexPackages")
+# Set TikZ Options
+options(
+	tikzLatexPackages = c(
+		"\\usepackage{tikz}\n",
+		"\\usepackage[active,tightpage,psfixbb]{preview}\n",
+		"\\PreviewEnvironment{pgfpicture}\n",
+		"\\setlength\\PreviewBorder{0pt}\n",
+		# "\\input{\\string~/HeadRs/common_supplement.tex}\n",
+		# "\\input{\\string~/HeadRs/stathead.sty}\n",
+		NULL
+	),
+	tikzDefaultEngine = 'luatex',
+	tikzLualatexPackages = c(
+		# "\\usepackage[utf8]{inputenc}",
+		"\\usepackage{amssymb}",
+		"\\usepackage{upgreek}",
+		"\\usepackage[no-math]{fontspec}\n",
+		paste0(
+			"\\setmainfont{Arial}",
+			ifelse(Sys.info()["sysname"] == "Darwin" &
+						 	Sys.info()["user"] == "kevinchen",
+						 "\n",
+						 "[Extension = .ttf,
+			UprightFont = *,
+			BoldFont = *bd,
+			talicFont = *i,
+			BoldItalicFont = *bi]\n")),
+		"\\usepackage[italic]{mathastext}",
+		"\\usepackage{tikz}\n",
+		"\\usepackage[active,tightpage,psfixbb]{preview}\n",
+		"\\PreviewEnvironment{pgfpicture}\n",
+		"\\setlength\\PreviewBorder{0pt}\n",
+		# "\\input{\\string~/HeadRs/common_supplement.tex}\n",
+		# "\\input{\\string~/HeadRs/stathead.sty}\n",
+		NULL
+	)
+)
 ```
 
 # Background and movitation
@@ -139,6 +179,8 @@ $$\left\{
 \right.$$
 $$S + I + R = N$$
 
+See @Harko_2014 for closed-form solutions.
+
 # Compartmental modeling: theory of @Rella_2021
 
 \begin{center}
@@ -172,5 +214,142 @@ $$S + I + R = N$$
 \end{tikzpicture}
 \end{center}
 \end{figure}
+
+# Modeling waves in epidemiologic trajectory
+
+$$\beta(t) = R_0(t) \times \gamma \times N^{-1}$$
+where
+$$R_0(t) = \left\{\begin{aligned}
+R_{0, \text{low}} 
+\hspace{1em} \text{if}\hspace{1em}    & I > N \times p_h 
+							&& \text{and} \hspace{1em} R_0(t - \Delta t) = R_{0, \text{high}} \\
+R_{0, \text{high}}  
+\hspace{1em} \text{if}\hspace{1em}    & I \times p_h \times p_l
+							&& \text{and} \hspace{1em} R_0(t - \Delta t) = R_{0, \text{low}}
+\end{aligned}\right.$$
+where $I = I_{wt} + I_r + I_r^V$
+
+# Preliminary fit with time-invariant $p_h$ and $p_l$
+
+```{r, echo=F}
+source('../../script/01-compartments.R')
+source('../../script/03-initial_values.R')
+san_francisco.dat <- fread("../../data/san_francisco.csv")
+san_francisco.dat <- san_francisco.dat[date >= as.Date('2021-06-15')]
+san_francisco.dat[,time := 1:.N]
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ODE solution
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+times <- seq(from = 1, to = 603, by = parameters['dt'])
+R0 <<- 0
+trajectory.ode <- as.data.frame(ode(
+	y = initial_state,
+	times = times,
+	parms = replace(parameters,
+									grep("tighten|loosen", names(parameters), value = T),
+									c(rep(400, 4),
+										rep(8, 4))),
+	func = compartmental_model,
+	method = "lsode"))
+# rm(list = c('n_to_r', 'n_to_wt', 'R0'))
+
+beta <- get_beta(trajectory.ode, parameters)
+trajectory.ode$incidence <- beta * with(
+	trajectory.ode, S * (I_wt + I_r + I_rV) + V * (I_r + I_rV))
+trajectory.ode$incidence_wt <- beta * with(
+	trajectory.ode, S * I_wt)
+trajectory.ode$incidence_r <- beta * with(
+	trajectory.ode, S * (I_r + I_rV) + V * (I_r + I_rV))
+
+# The first few entries of the trajectory matrix:
+trajectory.ode %>%
+	ggplot(aes(x = san_francisco.dat[time, date])) +
+	geom_point(
+		data = san_francisco.dat,
+		aes(y = cases), size = 1/.pt, alpha = 0.75) +
+	geom_path(aes(y = incidence), col = 'salmon', linewidth = 2/.pt) +
+	theme_bw() +
+	labs(y = "$S (I_{wt} + I_r + I_r^V) + V (I_r + I_r^V)$", x = "Date") -> fit1.ggplot
+```
+
+```{r, dev='tikz'}
+fit1.ggplot
+```
+
+# Preliminary fit with time-varying $p_h$ and $p_l$
+
+```{r, echo=F}
+R0 <<- 0
+trajectory.ode <- as.data.frame(ode(
+	y = initial_state,
+	times = times,
+	parms = parameters,
+	func = compartmental_model,
+	method = "lsode"))
+# rm(list = c('n_to_r', 'n_to_wt', 'R0'))
+
+beta <- get_beta(trajectory.ode, parameters)
+trajectory.ode$incidence <- beta * with(
+	trajectory.ode, S * (I_wt + I_r + I_rV) + V * (I_r + I_rV))
+trajectory.ode$incidence_wt <- beta * with(
+	trajectory.ode, S * I_wt)
+trajectory.ode$incidence_r <- beta * with(
+	trajectory.ode, S * (I_r + I_rV) + V * (I_r + I_rV))
+
+# The first few entries of the trajectory matrix:
+important_dates <- c(Thanksgiving = 'holiday_date', `Bars reopen` = 'reopening_date', `Gavin declares end` = 'summer_date')
+trajectory.ode %>%
+	ggplot(aes(x = san_francisco.dat[time, date])) +
+	geom_point(
+		data = san_francisco.dat,
+		aes(y = cases), size = 1/.pt, alpha = 0.75) +
+	geom_path(aes(y = incidence), col = 'salmon', linewidth = 2/.pt) +
+	geom_vline(xintercept = san_francisco.dat[time == round(parameters['holiday_date'] - 0.5), date],
+						 linewidth = 1/.pt, linetype = 2) +
+	geom_vline(xintercept = san_francisco.dat[time == round(parameters['reopening_date'] - 0.5), date],
+						 linewidth = 1/.pt, linetype = 2) +
+	geom_vline(xintercept = san_francisco.dat[time == round(parameters['summer_date'] - 0.5), date],
+						 linewidth = 1/.pt, linetype = 2) +
+	geom_text(data = san_francisco.dat[
+		time %in% round(parameters[important_dates] - 0.5),.(
+			date = date, label = names(important_dates))],
+		aes(x = date - 20, y = 3000, label = label),
+		size = 8/.pt, angle = 90, hjust = 1) +
+	theme_bw() +
+	labs(y = "$S (I_{wt} + I_r + I_r^V) + V (I_r + I_r^V)$", x = "Date") -> fit2.ggplot
+```
+
+```{r, dev='tikz'}
+fit2.ggplot
+```
+
+
+# Parameter specification (time-permitting)
+
+| Parameter   | Value            | Interpretation                              |
+|-------------|------------------|---------------------------------------------|
+|$\theta$			| 250.6335			       | Vaccination rate (vaccines per day)         |
+|$\delta$			| 7.3 $\times$ 10,000  | Death rate (deaths per day)                 |
+|${R_0}_h$    | 2.2                  | $R_0$ during low caution     |
+|${R_0}_l$    | 0.65                 | $R_0$ during high caution     |
+|$\gamma$     | 1/14               | Inv. disease duration (days)             |
+|$\mu$        | 1/(30 $\times$ 12) | Inv. duration of natural immunity        |
+|$\omega$     | 1/(30 $\times$ 12) | Inv. duration of vaccine protection      |
+
+
+# Parameter specification (time-permitting)
+
+| Parameter   | Value            | Interpretation                              |
+|-------------|------------------|---------------------------------------------|
+|$p_{h,1}$    | 1/350              | Maximum prevalence before preventive measures in 1st wave    |
+|$p_{h,2}$    | 1/63               | Maximum prevalence (2nd)   |
+|$p_{h,3}$    | 1/165              | Maximum prevalence (3rd)    |
+|$p_{h,4}$    | 1/325              | Maximum prevalence (4th)   |
+|$p_{l,1}$    | 1/(350 $\times$ 15) | Allowable prevalence before before loosening measures (1st) |
+|$p_{l,2}$    | 1/(63 $\times$ 15) | Allowable prevalence (2nd) |
+|$p_{l,3}$    | 1/(165 $\times$ 2.5) | Allowable prevalence (3rd) |
+|$p_{l,4}$    | 1/(325 $\times$ 17) | Allowable prevalence (4th) |
+
 
 # References

@@ -227,7 +227,7 @@ Dimaggio \and Jingxuan Fan}
 
 \begin{document}
 \maketitle
-\ifdefined\Shaded\renewenvironment{Shaded}{\begin{tcolorbox}[sharp corners, frame hidden, borderline west={3pt}{0pt}{shadecolor}, boxrule=0pt, enhanced, interior hidden, breakable]}{\end{tcolorbox}}\fi
+\ifdefined\Shaded\renewenvironment{Shaded}{\begin{tcolorbox}[interior hidden, frame hidden, breakable, borderline west={3pt}{0pt}{shadecolor}, boxrule=0pt, sharp corners, enhanced]}{\end{tcolorbox}}\fi
 
 All script used to download and clean the data, conduct analyses,
 produce output, and prepare documents may be found on our GitHub
@@ -517,27 +517,25 @@ Interpretation
 \end{minipage} \\
 \midrule()
 \endhead
-\(h\) & 0.2 & Percent of population without vaccination \\
-\(k\) & 0.01 & Saturation of vaccination speed \\
-\(p\) & 0 & Emergence rate \\
 \(\theta\) & 250.6335 & Vaccination rate (vaccines per day) \\
 \(\delta\) & 7.3 \(\times\) 10,000 & Death rate (deaths per day) \\
-\(t_1\) & 160.5 & Start of second wave (2021-11-21) \\
-\(t_2\) & 305.5 & Start of third wave (2021-04-15) \\
-\(t_3\) & 385.5 & Start of fourth wave (2021-07-04) \\
 \({R_0}_h\) & 2.2 & Basic reproduction number during growth \\
 \({R_0}_l\) & 0.65 & Basic reproduction number during decay \\
 \(\gamma\) & 1 / 14 & Inverse disease duration (days) \\
-\(\mu\) & 1 / (30 * 12) & Inverse duration of natural immunity \\
-\(\omega\) & 1 / (30 * 12) & Inverse duration of vaccine protection \\
-\(h_1\) & 350 & Maximum inverse prevalence in first wave \\
-\(h_2\) & 63 & Maximum inverse prevalence in second wave \\
-\(h_3\) & 165 & Maximum inverse prevalence in third wave \\
-\(h_4\) & 325 & Maximum inverse prevalence in fourth wave \\
-\(l_1\) & 15 & Fold reduction required before growth (1st) \\
-\(l_2\) & 15 & Fold reduction required before growth (2nd) \\
-\(l_3\) & 2.5 & Fold reduction required before growth (3rd) \\
-\(l_4\) & 17 & Fold reduction required before growth (4th) \\
+\(\mu\) & 1 / (30 \(\times\) 12) & Inverse duration of natural
+immunity \\
+\(\omega\) & 1 / (30 \(\times\) 12) & Inverse duration of vaccine
+protection \\
+\(p_{h,1}\) & 1 / 350 & Maximum prevalence before preventive measures in
+first wave \\
+\(p_{h,2}\) & 1 / 63 & Maximum prevalence in second wave \\
+\(p_{h,3}\) & 1 / 165 & Maximum prevalence in third wave \\
+\(p_{h,4}\) & 1 / 325 & Maximum prevalence in fourth wave \\
+\(p_{l,1}\) & 1 / (350 \(\times\) 15) & Allowable prevalence before
+before loosening measures (1st) \\
+\(p_{l,2}\) & 1 / (63 \(\times\) 15) & Allowable prevalence (2nd) \\
+\(p_{l,3}\) & 1 / (165 \(\times\) 2.5) & Allowable prevalence (3rd) \\
+\(p_{l,4}\) & 1 / (325 \(\times\) 17) & Allowable prevalence (4th) \\
 \bottomrule()
 \end{longtable}
 

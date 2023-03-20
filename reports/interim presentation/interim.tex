@@ -213,7 +213,7 @@
 
 \begin{document}
 \frame{\titlepage}
-\ifdefined\Shaded\renewenvironment{Shaded}{\begin{tcolorbox}[boxrule=0pt, breakable, borderline west={3pt}{0pt}{shadecolor}, sharp corners, frame hidden, interior hidden, enhanced]}{\end{tcolorbox}}\fi
+\ifdefined\Shaded\renewenvironment{Shaded}{\begin{tcolorbox}[boxrule=0pt, frame hidden, interior hidden, enhanced, sharp corners, borderline west={3pt}{0pt}{shadecolor}, breakable]}{\end{tcolorbox}}\fi
 
 \begin{frame}{Background and movitation}
 \protect\hypertarget{background-and-movitation}{}
@@ -354,6 +354,8 @@
 \frac{d}{dt} R & = \gamma I
 \end{aligned}
 \right.\] \[S + I + R = N\]
+
+See Harko, Lobo, and Mak (2014) for closed-form solutions.
 \end{frame}
 
 \begin{frame}{Compartmental modeling: theory of Rella et al. (2021)}
@@ -392,6 +394,87 @@
 \textbackslash end\{figure\}
 \end{frame}
 
+\begin{frame}{Modeling waves in epidemiologic trajectory}
+\protect\hypertarget{modeling-waves-in-epidemiologic-trajectory}{}
+\[\beta(t) = R_0(t) \times \gamma \times N^{-1}\] where
+\[R_0(t) = \left\{\begin{aligned}
+R_{0, \text{low}} 
+\hspace{1em} \text{if}\hspace{1em}    & I > N \times p_h 
+                            && \text{and} \hspace{1em} R_0(t - \Delta t) = R_{0, \text{high}} \\
+R_{0, \text{high}}  
+\hspace{1em} \text{if}\hspace{1em}    & I \times p_h \times p_l
+                            && \text{and} \hspace{1em} R_0(t - \Delta t) = R_{0, \text{low}}
+\end{aligned}\right.\] where \(I = I_{wt} + I_r + I_r^V\)
+\end{frame}
+
+\begin{frame}{Preliminary fit with time-invariant \(p_h\) and \(p_l\)}
+\protect\hypertarget{preliminary-fit-with-time-invariant-p_h-and-p_l}{}
+\includegraphics{interim_files/figure-beamer/unnamed-chunk-2-1.pdf}
+\end{frame}
+
+\begin{frame}{Preliminary fit with time-varying \(p_h\) and \(p_l\)}
+\protect\hypertarget{preliminary-fit-with-time-varying-p_h-and-p_l}{}
+\includegraphics{interim_files/figure-beamer/unnamed-chunk-4-1.pdf}
+\end{frame}
+
+\begin{frame}{Parameter specification (time-permitting)}
+\protect\hypertarget{parameter-specification-time-permitting}{}
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.1711}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.2368}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.5921}}@{}}
+\toprule()
+\begin{minipage}[b]{\linewidth}\raggedright
+Parameter
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Value
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Interpretation
+\end{minipage} \\
+\midrule()
+\endhead
+\(\theta\) & 250.6335 & Vaccination rate (vaccines per day) \\
+\(\delta\) & 7.3 \(\times\) 10,000 & Death rate (deaths per day) \\
+\({R_0}_h\) & 2.2 & \(R_0\) during low caution \\
+\({R_0}_l\) & 0.65 & \(R_0\) during high caution \\
+\(\gamma\) & 1/14 & Inv. disease duration (days) \\
+\(\mu\) & 1/(30 \(\times\) 12) & Inv. duration of natural immunity \\
+\(\omega\) & 1/(30 \(\times\) 12) & Inv. duration of vaccine
+protection \\
+\bottomrule()
+\end{longtable}
+\end{frame}
+
+\begin{frame}{Parameter specification (time-permitting)}
+\protect\hypertarget{parameter-specification-time-permitting-1}{}
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.1711}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.2368}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.5921}}@{}}
+\toprule()
+\begin{minipage}[b]{\linewidth}\raggedright
+Parameter
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Value
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Interpretation
+\end{minipage} \\
+\midrule()
+\endhead
+\(p_{h,1}\) & 1/350 & Maximum prevalence before preventive measures in
+1st wave \\
+\(p_{h,2}\) & 1/63 & Maximum prevalence (2nd) \\
+\(p_{h,3}\) & 1/165 & Maximum prevalence (3rd) \\
+\(p_{h,4}\) & 1/325 & Maximum prevalence (4th) \\
+\(p_{l,1}\) & 1/(350 \(\times\) 15) & Allowable prevalence before before
+loosening measures (1st) \\
+\(p_{l,2}\) & 1/(63 \(\times\) 15) & Allowable prevalence (2nd) \\
+\(p_{l,3}\) & 1/(165 \(\times\) 2.5) & Allowable prevalence (3rd) \\
+\(p_{l,4}\) & 1/(325 \(\times\) 17) & Allowable prevalence (4th) \\
+\bottomrule()
+\end{longtable}
+\end{frame}
+
 \begin{frame}{References}
 \protect\hypertarget{references}{}
 \hypertarget{refs}{}
@@ -401,6 +484,12 @@ CDC. 2021. {``First Confirmed Case of Omicron Variant Detected in the
 United States.''} \emph{First Confirmed Case of Omicron Variant Detected
 in the United States}.
 \url{https://www.cdc.gov/media/releases/2021/s1201-omicron-variant.html}.
+
+\leavevmode\vadjust pre{\hypertarget{ref-Harko_2014}{}}%
+Harko, Tiberiu, Francisco SN Lobo, and MK3197716 Mak. 2014. {``Exact
+Analytical Solutions of the Susceptible-Infected-Recovered (SIR)
+Epidemic Model and of the SIR Model with Equal Death and Birth Rates.''}
+\emph{Applied Mathematics and Computation} 236: 184--94.
 
 \leavevmode\vadjust pre{\hypertarget{ref-Rella_2021}{}}%
 Rella, Simon A, Yuliya A Kulikova, Emmanouil T Dermitzakis, and Fyodor A
