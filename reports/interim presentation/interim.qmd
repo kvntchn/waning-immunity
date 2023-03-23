@@ -224,7 +224,7 @@ R_{0, \text{low}}
 \hspace{1em} \text{if}\hspace{1em}    & I > N \times p_h 
 							&& \text{and} \hspace{1em} R_0(t - \Delta t) = R_{0, \text{high}} \\
 R_{0, \text{high}}  
-\hspace{1em} \text{if}\hspace{1em}    & I \times p_h \times p_l
+\hspace{1em} \text{if}\hspace{1em}    & I < N \times p_h \times p_l
 							&& \text{and} \hspace{1em} R_0(t - \Delta t) = R_{0, \text{low}}
 \end{aligned}\right.$$
 where $I = I_{wt} + I_r + I_r^V$
@@ -233,16 +233,17 @@ where $I = I_{wt} + I_r + I_r^V$
 
 ```{r, echo=F}
 source('../../script/01-compartments.R')
-source('../../script/03-initial_values.R')
 san_francisco.dat <- fread("../../data/san_francisco.csv")
 san_francisco.dat <- san_francisco.dat[date >= as.Date('2021-06-15')]
 san_francisco.dat[,time := 1:.N]
+source('../../script/03-initial_values.R')
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # ODE solution
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 times <- seq(from = 1, to = 603, by = parameters['dt'])
 R0 <<- 0
+resistant_strain_established <- F
 trajectory.ode <- as.data.frame(ode(
 	y = initial_state,
 	times = times,
@@ -254,13 +255,12 @@ trajectory.ode <- as.data.frame(ode(
 	method = "lsode"))
 # rm(list = c('n_to_r', 'n_to_wt', 'R0'))
 
-beta <- get_beta(trajectory.ode, parameters)
-trajectory.ode$incidence <- beta * with(
-	trajectory.ode, S * (I_wt + I_r + I_rV) + V * (I_r + I_rV))
-trajectory.ode$incidence_wt <- beta * with(
-	trajectory.ode, S * I_wt)
-trajectory.ode$incidence_r <- beta * with(
-	trajectory.ode, S * (I_r + I_rV) + V * (I_r + I_rV))
+trajectory.ode$incidence <- with(
+	trajectory.ode, beta * (S * (I_wt + I_r + I_rV) + V * (I_r + I_rV)))
+trajectory.ode$incidence_wt <- with(
+	trajectory.ode, beta * S * I_wt)
+trajectory.ode$incidence_r <- with(
+	trajectory.ode, beta * (S * (I_r + I_rV) + V * (I_r + I_rV)))
 
 # The first few entries of the trajectory matrix:
 trajectory.ode %>%
@@ -289,13 +289,12 @@ trajectory.ode <- as.data.frame(ode(
 	method = "lsode"))
 # rm(list = c('n_to_r', 'n_to_wt', 'R0'))
 
-beta <- get_beta(trajectory.ode, parameters)
-trajectory.ode$incidence <- beta * with(
-	trajectory.ode, S * (I_wt + I_r + I_rV) + V * (I_r + I_rV))
-trajectory.ode$incidence_wt <- beta * with(
-	trajectory.ode, S * I_wt)
-trajectory.ode$incidence_r <- beta * with(
-	trajectory.ode, S * (I_r + I_rV) + V * (I_r + I_rV))
+trajectory.ode$incidence <- with(
+	trajectory.ode, beta * (S * (I_wt + I_r + I_rV) + V * (I_r + I_rV)))
+trajectory.ode$incidence_wt <- with(
+	trajectory.ode, beta * S * I_wt)
+trajectory.ode$incidence_r <- with(
+	trajectory.ode, beta * (S * (I_r + I_rV) + V * (I_r + I_rV)))
 
 # The first few entries of the trajectory matrix:
 important_dates <- c(Thanksgiving = 'holiday_date', `Bars reopen` = 'reopening_date', `Gavin declares end` = 'summer_date')

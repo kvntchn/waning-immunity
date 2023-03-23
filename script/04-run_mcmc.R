@@ -87,11 +87,12 @@ mcmc_trace_no_emergence <- mh_mcmc(
 	constant_which = constant_which,
 	num_iter = 2.5e4,
 	progress = F,
-	C = diag((prior_sd / d / 35)^2, d),
+	C_0 = diag((prior_sd * 0.1)^2 / d, d),
 	adapt_after = d * 2,
-	epsilon = 0.5
+	epsilon = 0.05,
+	beta = 0.05
 	)
-save(mcmc_trace_no_emergence, file = 'output/mcmc_trace_no_emergence.rdata')
+# save(mcmc_trace_no_emergence, file = 'output/mcmc_trace_no_emergence.rdata')
 
 # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # # ODE using parameter estimates from MCMC
@@ -110,25 +111,3 @@ save(mcmc_trace_no_emergence, file = 'output/mcmc_trace_no_emergence.rdata')
 # 	fitted = mcmc_parameters
 # )
 #
-# times <- seq(from = 1, to = nrow(san_francisco.dat), by = parameters['dt'])
-# R0 <<- 0
-# trajectory.ode <- as.data.frame(ode(y = initial_state,
-# 																		times = times,
-# 																		parms = mcmc_parameters,
-# 																		func = compartmental_model,
-# 																		method = "lsode"))
-# rm(list = c('n_to_r', 'n_to_wt', 'R0'))
-#
-# beta <- get_beta(trajectory.ode, parameters)
-# trajectory.ode$incidence <- beta * with(
-# 	trajectory.ode, S * (I_wt + I_r + I_rV) + V * (I_r + I_rV))
-#
-# # The first few entries of the trajectory matrix:
-# trajectory.ode %>%
-# 	ggplot(aes(x = time)) +
-# 	geom_point(aes(y = incidence), shape = 2, alpha = 0.6, col = 'salmon') +
-# 	# geom_point(aes(y = I_wt + I_r + I_rV), shape = 2) +
-# 	geom_point(data = san_francisco.dat[seq(1, .N, 3)],
-# 						 aes(y = cases), size = 1/.pt) +
-# 	coord_cartesian(ylim = c(0, 2e3)) +
-# 	theme_bw()

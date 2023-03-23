@@ -13,21 +13,21 @@ source('script/01-compartments.R')
 log_prior_theta <- function(theta_proposed, hyperparam) {
 	if (any(hyperparam$alpha == 0 | hyperparam$beta == 0)) {
 		return(-Inf)} else {
-		beta.which <- grep("R0_low", hyperparam$param)
-		gamma_prior <- sapply(hyperparam$param[-beta.which], function(x) {
-			dgamma(transform_parameters(theta_proposed[[x]]),
-						 with(hyperparam, alpha[param == x]),
-						 with(hyperparam, beta[param == x]),
-						 log = T)
-		})
-		beta_prior <- sapply(hyperparam$param[beta.which], function(x) {
-			dbeta(transform_parameters(theta_proposed[[x]]),
-						with(hyperparam, alpha[param == x]),
-						with(hyperparam, beta[param == x]),
-						log = T)
-		})
-		return(sum(unlist(c(gamma_prior, beta_prior))))
-	}
+			beta.which <- grep("R0_low", hyperparam$param)
+			gamma_prior <- sapply(hyperparam$param[-beta.which], function(x) {
+				dgamma(transform_parameters(theta_proposed[[x]]),
+							 with(hyperparam, alpha[param == x]),
+							 with(hyperparam, beta[param == x]),
+							 log = T)
+			})
+			beta_prior <- sapply(hyperparam$param[beta.which], function(x) {
+				dbeta(transform_parameters(theta_proposed[[x]]),
+							with(hyperparam, alpha[param == x]),
+							with(hyperparam, beta[param == x]),
+							log = T)
+			})
+			return(sum(unlist(c(gamma_prior, beta_prior))))
+		}
 }
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -47,7 +47,7 @@ log_lik_traj <- function(times, data = san_francisco.dat, theta_proposed, initia
 			func = compartmental_model,
 			method = "impAdams_d"
 		)$result)[1:nrow(data),]
-	}, timeout = 45, onTimeout = "warning")
+	}, timeout = 45 * 2, onTimeout = "warning")
 	rm(list = c('n_to_r', 'n_to_wt', 'R0'), envir = .GlobalEnv)
 	if (exists('traj')) {
 		Sys.sleep(0)
@@ -90,7 +90,7 @@ log_lik_traj <- function(times, data = san_francisco.dat, theta_proposed, initia
 		lcases <- log(data$cases + 1)
 		lincidence <- log(incidence + 1)
 		loglik <- dt((lcases - lincidence) / (sd(data$cases) / mean(data$cases)),
-								 2,
+								 length(lcases) - 1,
 								 log = T)
 		# cat(min(loglik), "\n")
 		return( sum( loglik + 7 ) )
@@ -129,8 +129,8 @@ mh_mcmc <- function(
 		hyperparam = prior_hyperparameters,
 		num_iter = 500, quiet = F,
 		progress = F, acceptance_progress = F,
-		s = 2.38, epsilon = 0.05,
-		C,
+		s = 2.38, epsilon = 0.05, beta = 0.05,
+		C_0,
 		adapt_after) {
 	# Evaluate the function `posterior` at `init`
 	post_current <- posterior(theta_proposed = init, hyperparam)
@@ -145,43 +145,24 @@ mh_mcmc <- function(
 	# Run the MCMC algorithm for `num_iter` iterations.
 	if (progress)        {pb <- txtProgressBar(min = 0, max = num_iter, style = 3)}
 	for (i in 1:num_iter) {
-		# i <- 1
 		current_accepted <- 0
 		# Draw a new theta from a proposal distribution and
 		# assign this to a variable called theta_proposed.
 		proposal_mean <- theta_current[-constant_which]
-		if (i <= adapt_after) {
-			theta_proposed <- c(
-				init[constant_which],
-				MASS::mvrnorm(
-					1,
-					proposal_mean,
-					C))
-		}
-		if (i == adapt_after) {
-			Xbar_prev <- colMeans(samples[1:(i - 1), -constant_which])
-			Xbar_prev <- Xbar_prev
-		}
+		theta_proposed <- c(
+			init[constant_which],
+			MASS::mvrnorm(
+				1,
+				proposal_mean,
+				Sigma = C_0))
 		if (i > adapt_after) {
-			# Calculate covariance
-			X <- samples[(i - 1), -constant_which]
-			Xbar <- (Xbar_prev * (i - 1) + X) / i
-			C <- (i - 1) / i * C + s^2 / d / i * (
-				(i * outer(Xbar_prev, Xbar_prev) -
-				 	(i + 1) * outer(Xbar, Xbar) + outer(X, X)) + diag(epsilon, d)
-			)
-			Xbar_prev <- Xbar
 			# Draw from proposal distribution
-			theta_proposed <- c(
-				init[constant_which],
-				MASS::mvrnorm(
+			theta_proposed[-constant_which] <- theta_proposed[-constant_which] * beta +
+				(1 - beta) * MASS::mvrnorm(
 					1,
 					proposal_mean,
-					Sigma = cov(samples[1:(i - 1), -constant_which])
-				)
-			)
+					Sigma = Rfast::cova(samples[1:(i - 1), -constant_which]))
 		}
-		# theta_proposed[-constant_which][1:3] <- sort(theta_proposed[-constant_which][1:3])
 		names(theta_proposed) <- names(init)
 		# Evaluate the (log) posterior function
 		post_proposed <- posterior(theta_proposed, hyperparam)

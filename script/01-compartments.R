@@ -75,7 +75,7 @@ compartmental_model <- function(time, state = initial_state, parameters) {
 		dR    <- - (1 / recovery_period) * R - theta * R + (1 / disease_duration) * (I_wt + I_r)
 		dRV   <- - (1 / recovery_period) * RV + theta * R + (1 / disease_duration) * I_rV
 		dD    <- delta * (I_wt + I_r + I_rV)
-		dV    <- (1 / recovery_period) * RV + theta * S - beta * V + (I_r + I_rV) -
+		dV    <- (1 / recovery_period) * RV + theta * S - beta * V * (I_r + I_rV) -
 			(1 / immune_period) * V
 		return(list(
 			c(dS, dI_wt, dI_r, dI_rV, dR, dRV, dD, dV),
