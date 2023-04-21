@@ -59,37 +59,10 @@ log_lik_traj <- function(times, data = san_francisco.dat, theta_proposed, initia
 		incidence <- incidence_r + incidence_wt
 		incidence[incidence < 0] <- 0
 		# Compute vaccinated
-		# plot(times, data$cases)
-		# lines(times, incidence, col = 'salmon')
-		# plot(incidence, data$cases, xlim = c(1, max(data$cases)))
-		# abline(coef = c(0,1))
-		# loglik <- sum(dpois(round(sum(data$cases)), sum(incidence), log = T))
-		# loglik <- c(
-		# 	dpois(round(
-		# 		sum(data$cases[times < theta_proposed['holiday_date']])),
-		# 		sum(incidence[times < theta_proposed['holiday_date']]),
-		# 		log = T),
-		# 	dpois(round(
-		# 		sum(data$cases[times >= theta_proposed['holiday_date'] &
-		# 									 	times < theta_proposed['reopening_date']])),
-		# 		sum(incidence[times >= theta_proposed['holiday_date'] &
-		# 										times < theta_proposed['reopening_date']]),
-		# 		log = T),
-		# 	dpois(round(
-		# 		sum(data$cases[times >= theta_proposed['reopening_date'] &
-		# 									 	times < theta_proposed['summer_date']])),
-		# 		sum(incidence[times >= theta_proposed['reopening_date'] &
-		# 										times < theta_proposed['summer_date']]),
-		# 		log = T),
-		# 	dpois(round(
-		# 		sum(data$cases[times >= theta_proposed['summer_date']])),
-		# 		sum(incidence[times >= theta_proposed['summer_date']]),
-		# 		log = T)
-		# 	)
-		# loglik <- dpois(data$cases, incidence, log = T)
 		lcases <- log(data$cases + 1)
 		lincidence <- log(incidence + 1)
-		loglik <- dt((lcases - lincidence) / (sd(data$cases) / mean(data$cases)),
+		loglik <- dt((lcases - lincidence) / sqrt(
+			exp( var(data$cases) - 1 ) * exp( 2 * mean(data$cases) ) + var(data$cases)),
 								 length(lcases) - 1,
 								 log = T)
 		# cat(min(loglik), "\n")
@@ -125,90 +98,99 @@ log_post_wrapper <- function(theta_proposed = init, hyperparam) {
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 mh_mcmc <- function(
 		posterior = log_post_wrapper,
-		init = parameters, constant_which,
+		init = parameters,
+		constant_which,
 		hyperparam = prior_hyperparameters,
-		num_iter = 500, quiet = F,
+		num_iter = 500,
+		quiet = F,
 		progress = F, acceptance_progress = F,
-		s = 2.38, epsilon = 0.05, beta = 0.05,
 		C_0,
-		adapt_after) {
+		batch_size = 50) {
 	# Evaluate the function `posterior` at `init`
 	post_current <- posterior(theta_proposed = init, hyperparam)
 	# Initialize variables to store the current value of theta, the
 	# vector of sample values, and the number of accepted proposals
-	theta_current <- init
+	theta_proposed <- theta_current <- init
 	d <- length(init[-constant_which])
-	samples <- matrix(NA, ncol = length(init), nrow = num_iter)
+	samples <- matrix(NA, ncol = length(init), nrow = num_iter * d)
 	colnames(samples) <- names(init)
-	accepted <- rep(F, num_iter)
-	acceptance_rate <- rep(NA, num_iter)
+	accepted <- matrix(F, nrow = num_iter, ncol = d)
+	acceptance_rate <- matrix(NA, nrow = num_iter, ncol = d)
 	# Run the MCMC algorithm for `num_iter` iterations.
 	if (progress)        {pb <- txtProgressBar(min = 0, max = num_iter, style = 3)}
 	for (i in 1:num_iter) {
-		current_accepted <- 0
+    current_accepted <- rep(0, d)
 		# Draw a new theta from a proposal distribution and
 		# assign this to a variable called theta_proposed.
-		proposal_mean <- theta_current[-constant_which]
-		theta_proposed <- c(
-			init[constant_which],
-			MASS::mvrnorm(
-				1,
-				proposal_mean,
-				Sigma = C_0))
-		if (i > adapt_after) {
-			# Draw from proposal distribution
-			theta_proposed[-constant_which] <- theta_proposed[-constant_which] * beta +
-				(1 - beta) * MASS::mvrnorm(
-					1,
-					proposal_mean,
-					Sigma = Rfast::cova(samples[1:(i - 1), -constant_which]))
-		}
-		names(theta_proposed) <- names(init)
-		# Evaluate the (log) posterior function
-		post_proposed <- posterior(theta_proposed, hyperparam)
-		# Compute the Metropolis-Hastings (log) acceptance prob
-		log_accept <- (post_proposed - post_current)
-		if (is.finite(log_accept)) {
-			if (log_accept > 0) {
-				theta_current <- theta_proposed
-				post_current <- post_proposed
-				# And update number of accepted proposals.
-				current_accepted <- 1
-			} else {
-				# Draw a random number uniformly-distributed between 0 and 1
-				u <- runif(1)
-				# Use the random number and the acceptance probability to
-				# determine if `theta_proposed` will be accepted.
-				if (u < exp(log_accept)) {
-					# If accepted, update
+		# And update number of accepted proposals.
+		for (j in 1:d) {
+			theta_proposed[-constant_which][j] <- rnorm(
+				1, theta_current[-constant_which][j], exp( C_0[j] * 2 )
+			)
+			names(theta_proposed) <- names(init)
+			# Evaluate the (log) posterior function
+			post_proposed <- posterior(theta_proposed, hyperparam)
+			log_accept <- (post_proposed - post_current)
+			# Compute the Metropolis-Hastings (log) acceptance prob
+			if (is.finite(log_accept)) {
+				if (log_accept > 0) {
 					theta_current <- theta_proposed
-					post_current <- post_proposed
-					# And update number of accepted proposals.
-					current_accepted <- 1
-				}}}
-		# Add the current theta to the vector of samples.
-		samples[i,] <- theta_current
-		accepted[i] <- as.logical(current_accepted)
-		acceptance_rate[i] <- mean(accepted[1:i])
-		if (!quiet & !progress) {
-			if (i %% 50 == 0 | current_accepted == 1) {
+					post_current  <- post_proposed
+				} else {
+					# Draw a random number uniformly-distributed between 0 and 1
+					u <- runif(1)
+					# Use the random number and the acceptance probability to
+					# determine if `theta_proposed` will be accepted.
+					if (u < exp(log_accept)) {
+						# If accepted, update
+						theta_current <- theta_proposed
+						post_current  <- post_proposed
+						# And update number of accepted proposals.
+						current_accepted[j] <- 1
+					}}}
+
+			# Add the current theta to the vector of samples.
+			output_index <- seq(1, num_iter * d, d)[i] + j - 1
+			samples[output_index,] <- theta_current
+
+		}
+
+    accepted[i,] <- as.logical(current_accepted)
+		if (i > 1) {
+		acceptance_rate[i,] <- colMeans(accepted[1:i,])
+		} else {acceptance_rate[i,] <- accepted[1:i,]}
+		# Update?
+		if (i %% batch_size == 0) {
+			which_increase <- which(colMeans(accepted[(i - (batch_size - 1)):i,]) >= 0.455)
+			which_decrease <- which(colMeans(accepted[(i - (batch_size - 1)):i,]) <= 0.435)
+			C_0[which_increase]  <- C_0[which_increase] + 1 / sqrt(i / batch_size)
+			C_0[which_decrease]  <- C_0[which_decrease] - 1 / sqrt(i / batch_size)
+		}
+
+		if (!quiet & !progress & i > 1) {
+			if (i %% (50/d) == 0 | mean(current_accepted) > 0) {
 				# Print the current state of chain and acceptance rate.
 				cat("Iteration:", sprintf('% 5d', i),
-						"\tCurrent:", theta_current[-constant_which],
-						"\nAccepted:", c("no", "yes")[current_accepted + 1],
-						"\tAcceptance count:",
-						paste0(sum(accepted[1:i])),
-						paste0("(", round(acceptance_rate[i] * 100, 2), "%)\n")
+						"\n\tCurrent:", theta_current[-constant_which],
+						"\n\tAcceptance count:",
+						paste0(round(sum(rowMeans(accepted[1:i,])))),
+						"\n\t Acceptance rate:",
+						paste0(round(acceptance_rate[i,] * 100, 2),
+									 "% "),
+						"\n\n"
 				)
 			}}
 		if (progress) {setTxtProgressBar(pb, i)}
-		if (acceptance_progress) {
-			plot(1:i, cumsum(accepted[1:i])/(1:i),
+		if (acceptance_progress & i > 1) {
+			plot(1:i, cumsum( rowMeans(accepted[1:i,]) ) / (1:i),
 					 ylab = "Acceptance rate",
 					 ylim = c(0, 0.6), xlim = c(0, i + 10))
-			text(i + 8, 0.55, labels = paste0(round(acceptance_rate[i] * 100, 2), "%\n"), pos = 1)
+			text(i + 8, 0.55,
+					 labels = paste0(round(mean(acceptance_rate[i,]) * 100, 2),
+					 								"%\n"),
+					 pos = 1)
 		}
 		# i <- i + 1
 	}
-	return(cbind(accepted, acceptance_rate, samples))
+	return(list(accepted, acceptance_rate, samples))
 }

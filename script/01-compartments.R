@@ -10,7 +10,9 @@ library(rlang)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Derivatives function for closed compartmental model:
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-compartmental_model <- function(time, state = initial_state, parameters) {
+compartmental_model <- function(time, state = initial_state, parameters, parent_frame = .GlobalEnv) {
+	# print(parent_frame)
+
 	# Parameters:
 	with(as.list(c(parameters, state)), {
 		delta   <- death_rate_input(time)
@@ -38,33 +40,31 @@ compartmental_model <- function(time, state = initial_state, parameters) {
 		R0_low <- approxfun(
 			time_varying_parameters[,c(1, 5)], method = 'linear', rule = 2)
 
-		env <- current_env()
-		# if (all(sapply(c("I_wt", "I_r", "I_rV", "N", "tighten_factor", "loosen_factor"),
-		# 							 function(x) {is.finite(get(x, envir = env))}))) {
-			if ((I_wt + I_r + I_rV) > (N / tighten_factor(time)) &
-					get('R0', envir = .GlobalEnv) > 1) {
-				assign('R0', R0_low(time), envir = .GlobalEnv)
-			} else if ((I_wt + I_r + I_rV) < (N / (tighten_factor(time) * loosen_factor(time))) &
-								 get('R0', envir = .GlobalEnv) < 1) {
-				assign('R0', R0_high(time), envir = .GlobalEnv)}
+		if ((I_wt + I_r + I_rV) > (N / tighten_factor(time)) &
+				get('R0', envir = parent_frame) > 1) {
+			assign('R0', R0_low(time), envir = parent_frame)
+		} else if ((I_wt + I_r + I_rV) < (N / (tighten_factor(time) * loosen_factor(time))) &
+							 get('R0', envir = parent_frame) < 1) {
+			assign('R0', R0_high(time), envir = parent_frame)}
 
-			# Resistant strain?
-			if ((I_r + I_rV) >= N / 1000 | get("resistant_strain_established", .GlobalEnv)) {
-				resistant_strain_established <<- T
-			} else if (time >= emergence_date) {
-				if (stochastic) {
-					n_to_r  <<- rpois(1, dt * emergence_rate * max(0, I_wt))
-					n_to_wt <<- rpois(1, dt * emergence_rate * max(0, I_r))
-				} else {
-					n_to_r  <<- dt * emergence_rate * max(0, I_wt)
-					n_to_wt <<- dt * emergence_rate * max(0, I_r)
-				}
-				I_r  <- I_r  - n_to_wt + n_to_r
-				I_wt <- I_wt + n_to_wt - n_to_r
+		# Resistant strain?
+		n_to_r <- n_to_wt <- 0
+		if ((I_r + I_rV) >= (N / 1e4) | get("resistant_strain_established", parent_frame)) {
+			assign('resistant_strain_established', T, envir = parent_frame)
+		} else if (time >= emergence_date) {
+			if (stochastic) {
+				n_to_r <-  rpois(1, dt * emergence_rate * max(0, I_wt))
+				n_to_wt <- rpois(1, dt * emergence_rate * max(0, I_r))
+			} else {
+				n_to_r <- dt * emergence_rate * max(0, I_wt)
+				n_to_wt <- dt * emergence_rate * max(0, I_r)
 			}
-		# }
+			I_r  <- I_r  - n_to_wt + n_to_r
+			I_wt <- I_wt + n_to_wt - n_to_r
+		}
 
-		beta  <- get('R0', envir = .GlobalEnv) / disease_duration / N
+		beta  <- get('R0', envir = parent_frame) / disease_duration / N
+		R0    <- get('R0', envir = parent_frame)
 
 		# Derivatives:
 		dS    <- (1 / recovery_period) * R +
@@ -82,7 +82,9 @@ compartmental_model <- function(time, state = initial_state, parameters) {
 			death_rate = delta,
 			vaccination_rate = theta0,
 			R0 = R0,
-			beta = unname(beta)
+			beta = unname(beta),
+			n_to_r = n_to_r,
+			n_to_wt = n_to_wt
 			# tighten_factor = tighten_factor,
 			# loosen_factor  = loosen_factor
 		))

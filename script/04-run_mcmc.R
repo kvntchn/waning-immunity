@@ -23,13 +23,13 @@ constant_which <- 1:grep("emergence_date", names(parameters))
 d <- length(parameters[-constant_which])
 prior_mean <- transform_parameters(parameters[-constant_which])
 prior_sd   <- c(
-	5, 5, 5,
-	0.5, 0.5, 0.5, 0.5,
-	0.05, 0.05, 0.05, 0.05,
+	14, 14, 14,
+	2, 2, 2, 2,
+	0.25, 0.25, 0.25, 0.25,
 	7,
-	30 * 6, 30 * 6,
-	80, 20, 80, 80,
-	4, 4, 1, 2)
+	30 * 12, 30 * 12,
+	40, 10, 20, 40,
+	10, 10, 2, 5)
 prior_hyperparameters <- data.frame(
 	param = names(prior_mean),
 	alpha = prior_mean^2 / prior_sd^2,
@@ -81,27 +81,54 @@ prior_hyperparameters[R0_low.which,'beta'] <- (
 
 set.seed(222)
 
-mcmc_trace_no_emergence <- mh_mcmc(
+proposal_sd <- c(
+	holiday_date =  1,
+	reopening_date =  1,
+	summer_date =  1,
+	R0_high1 = 0.1,
+	R0_high2 = 0.1,
+	R0_high3 = 0.1,
+	R0_high4 = 0.1,
+	R0_low1 = 0.01,
+	R0_low2 = 0.01,
+	R0_low3 = 0.01,
+	R0_low4 = 0.01,
+	disease_duration = 0.5,
+	recovery_period = 1,
+	immune_period = 1,
+	tighten_factor1 = 1,
+	tighten_factor2 = 1,
+	tighten_factor3 = 1,
+	tighten_factor4 = 1,
+	loosen_factor1 = 0.5,
+	loosen_factor2 = 0.5,
+	loosen_factor3 = 0.1,
+	loosen_factor4 = 0.5,
+	NULL
+)
+mcmc_output <- mh_mcmc(
 	posterior = log_post_wrapper,
 	init = parameters,
 	constant_which = constant_which,
-	num_iter = 2.5e4,
+	num_iter = 5.5e3,
 	progress = F,
-	C_0 = diag((prior_sd * 0.1)^2 / d, d),
-	adapt_after = d * 2,
-	epsilon = 0.05,
-	beta = 0.05
+	C_0 = log(proposal_sd),
+	acceptance_progress = T,
+	batch_size = 50
 	)
-# save(mcmc_trace_no_emergence, file = 'output/mcmc_trace_no_emergence.rdata')
+# save(mcmc_output,
+# 		 file = 'output/mcmc_output_metro-in-gibbs.rdata')
 
 # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # # ODE using parameter estimates from MCMC
 # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# # load('output/mcmc_trace_no_emergence.rdata')
-# plot(mcmc(mcmc_trace_no_emergence[seq(1, nrow(mcmc_trace_no_emergence), 40),
-# 																	-(c(constant_which, 1:2 + max(constant_which)))]))
-# mcmc_trace_no_emergence_burned <- mcmc_trace_no_emergence[-(1:nrow(mcmc_trace_no_emergence)/2),]
-# plot(mcmc(mcmc_trace_no_emergence_burned[seq(1, nrow(mcmc_trace_no_emergence_burned), 5), -(1:13)]))
+# # load('output/mcmc_output_metro-in-gibbs.rdata')
+mcmc_trace_no_emergence <- mcmc_output[[3]]
+plot(mcmc(mcmc_trace_no_emergence[
+	seq(1, nrow(mcmc_trace_no_emergence), 1e2), -constant_which]))
+mcmc_trace_no_emergence_burned <- mcmc_trace_no_emergence[-c(1:5e4),]
+plot(mcmc(mcmc_trace_no_emergence_burned[
+	seq(1, nrow(mcmc_trace_no_emergence_burned), 10), -constant_which][1:2000,]))
 # mcmc_trace <- as.data.table(mcmc_trace_no_emergence[-(1:3e4),])
 # mcmc_parameters <- colMeans(mcmc_trace)
 #

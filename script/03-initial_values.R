@@ -44,7 +44,7 @@ parameters <- c(
 	emergence_rate = 0,
 	dt = 1,
 	stochastic = 0,
-	emergence_date = 161.5, # as.integer(as.Date('2021-11-30') - as.Date('2021-06-14')),
+	emergence_date = 0, # as.integer(as.Date('2021-11-30') - as.Date('2021-06-14')),
 	# Random parameters
 	holiday_date =  176, # as.integer(as.Date('2021-11-23') - as.Date('2021-06-14')),
 	reopening_date =  298, # as.integer(as.Date('2022-04-15') - as.Date('2021-06-14')),

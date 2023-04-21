@@ -13,6 +13,8 @@ source('script/03-initial_values.R')
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 times <- seq(from = 1, to = nrow(san_francisco.dat), by = parameters['dt'])
 R0 <- parameters['R0_high1']
+parameters['stochastic'] <- T
+parameters['emergence_rate'] <- 1e-2
 resistant_strain_established <- F
 trajectory.ode <- as.data.frame(ode(
 	y = initial_state,
@@ -20,12 +22,12 @@ trajectory.ode <- as.data.frame(ode(
 	parms = parameters,
 	func = compartmental_model,
 	method = "impAdams_d"))
-rm(list = c('n_to_r', 'n_to_wt', 'R0'))
+rm(list = c('R0'))
 
 trajectory.ode$incidence_wt <- with(
 	trajectory.ode, beta * S * I_wt)
-trajectory.ode$incidence_r <- with(
-	trajectory.ode, beta * (S * (I_r + I_rV) + V * (I_r + I_rV)))
+trajectory.ode$incidence_r <- pmax(0, with(
+	trajectory.ode, beta * (S * (I_r + I_rV) + V * (I_r + I_rV))))
 trajectory.ode$incidence <- with(
 	trajectory.ode, incidence_wt + incidence_r)
 
@@ -33,13 +35,11 @@ trajectory.ode$incidence <- with(
 trajectory.ode %>%
 	ggplot(aes(x = time)) +
 	geom_path(aes(y = incidence, col = "Total"), alpha = 0.6) +
-	# geom_path(aes(y = incidence_wt, col = "WT"), alpha = 0.6) +
-	# geom_path(aes(y = incidence_r, col = "R"), alpha = 0.6) +
-	# geom_path(aes(y = I_wt + I_r + I_rV), alpha = 0.6) +
+	geom_path(aes(y = incidence_r, col = "Resistent"), alpha = 0.6) +
 	geom_point(data = san_francisco.dat,
 						 aes(y = cases), size = 1/.pt) +
-	# geom_point(data = san_francisco.dat,
-	# 					 aes(y = deaths), size = 1/.pt) +
 	# hospitalization rate?
 	coord_cartesian(ylim = c(0, max(san_francisco.dat$cases))) +
 	theme_bw()
+
+message(paste("Max prevalence of resistant strain:", max(with(trajectory.ode, I_r + I_rV))))
