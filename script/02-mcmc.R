@@ -34,21 +34,26 @@ log_prior_theta <- function(theta_proposed, hyperparam) {
 # Log likelihood for trajectory
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 log_lik_traj <- function(times, data = san_francisco.dat, theta_proposed, initial_state) {
+	current_frame <- sys.frame(sys.nframe())
 	# Solve ODE
-	assign("resistant_strain_established", F, envir = .GlobalEnv)
-	assign("n_to_r", 0, envir = .GlobalEnv)
-	assign("n_to_wt", 0, envir = .GlobalEnv)
-	assign("R0", 0, envir = .GlobalEnv)
+	assign("resistant_strain_established", F, envir = current_frame)
+	assign("n_to_r", 0, envir = current_frame)
+	assign("n_to_wt", 0, envir = current_frame)
+	assign("R0", 0, envir = current_frame)
+	func <- function(time, state, parameters) {
+		compartmental_model(
+			time, state, parameters, parent_frame = current_frame
+		)}
 	withTimeout({
 		traj <- data.frame(quietly(ode)(
 			y = initial_state,
 			times = times,
 			parms = theta_proposed,
-			func = compartmental_model,
+			func = func,
 			method = "impAdams_d"
 		)$result)[1:nrow(data),]
 	}, timeout = 45 * 2, onTimeout = "warning")
-	rm(list = c('n_to_r', 'n_to_wt', 'R0'), envir = .GlobalEnv)
+	rm(list = c('n_to_r', 'n_to_wt', 'R0'), envir = current_frame)
 	if (exists('traj')) {
 		Sys.sleep(0)
 		if (nrow(na.exclude(traj)) < nrow(data)) {return(-Inf)}
@@ -192,5 +197,5 @@ mh_mcmc <- function(
 		}
 		# i <- i + 1
 	}
-	return(list(accepted, acceptance_rate, samples))
+	return(list(accepted, acceptance_rate, samples, C_0))
 }

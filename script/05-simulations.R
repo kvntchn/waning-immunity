@@ -32,7 +32,7 @@ get_sim <- function(
 	if (!is.null(test_immune_period)) {
 		parameters['immune_period'] <- test_immune_period
 	}
-	func <- function(time, state = initial-state, parameters) {
+	func <- function(time, state = initial_state, parameters) {
 		compartmental_model(
 			time, state, parameters, parent_frame = current_frame
 		)}
@@ -102,6 +102,8 @@ param_grid <- expand.grid(
 
 message(Sys.time())
 sim_output <- rbindlist(apply(param_grid, 1, function(param) {
+	cat("Emergence rate:", param[[1]], "\n");
+	cat("Immune period:", param[[2]], "\n");
 	get_sims(1e3, test_emergence_rate = param[[1]], test_immune_period = param[[2]])
 }))
 message(Sys.time())

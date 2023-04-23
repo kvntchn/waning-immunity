@@ -110,14 +110,13 @@ mcmc_output <- mh_mcmc(
 	posterior = log_post_wrapper,
 	init = parameters,
 	constant_which = constant_which,
-	num_iter = 5.5e3,
+	num_iter = 2.5e3,
 	progress = F,
-	C_0 = log(proposal_sd),
+	C_0 = log(proposal_sd / 2.38),
 	acceptance_progress = T,
-	batch_size = 50
+	batch_size = 100
 	)
-# save(mcmc_output,
-# 		 file = 'output/mcmc_output_metro-in-gibbs.rdata')
+# save(mcmc_output, file = 'output/mcmc_output_metro-in-gibbs.rdata')
 
 # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # # ODE using parameter estimates from MCMC
