@@ -100,11 +100,15 @@ param_grid <- expand.grid(
 	immune_period = immune_period
 )
 
-message(Sys.time())
-sim_output <- rbindlist(apply(param_grid, 1, function(param) {
-	cat("Emergence rate:", param[[1]], "\n");
-	cat("Immune period:", param[[2]], "\n");
-	get_sims(1e3, test_emergence_rate = param[[1]], test_immune_period = param[[2]])
-}))
-message(Sys.time())
-save(sim_output, file = 'output/sim_output.rdata')
+# message(Sys.time())
+# # 2023-04-21 14:38:57
+# sim_output <- rbindlist(apply(param_grid, 1, function(param) {
+# 	cat("Emergence rate:", param[[1]], "\n");
+# 	cat("Immune period:", param[[2]], "\n");
+# 	get_sims(1e3, test_emergence_rate = param[[1]], test_immune_period = param[[2]])
+# }))
+# message(Sys.time())
+# # 2023-04-23 22:22:46
+# # save(sim_output, file = 'output/sim_output.rdata')
+
+sim_output
