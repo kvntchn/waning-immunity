@@ -29,7 +29,7 @@ prior_sd   <- c(
 	7,
 	30 * 12, 30 * 12,
 	40, 10, 20, 40,
-	10, 10, 2, 5)
+	10, 10, 2, 5) / 2
 prior_hyperparameters <- data.frame(
 	param = names(prior_mean),
 	alpha = prior_mean^2 / prior_sd^2,
@@ -112,7 +112,7 @@ mcmc_output <- mh_mcmc(
 	constant_which = constant_which,
 	num_iter = 2.5e3,
 	progress = F,
-	C_0 = log(proposal_sd / 2.38),
+	C_0 = log(proposal_sd / 10),
 	acceptance_progress = T,
 	batch_size = 100
 	)
@@ -123,11 +123,12 @@ mcmc_output <- mh_mcmc(
 # # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # # load('output/mcmc_output_metro-in-gibbs.rdata')
 mcmc_trace_no_emergence <- mcmc_output[[3]]
+nrow(mcmc_trace_no_emergence)
 plot(mcmc(mcmc_trace_no_emergence[
 	seq(1, nrow(mcmc_trace_no_emergence), 1e2), -constant_which]))
-mcmc_trace_no_emergence_burned <- mcmc_trace_no_emergence[-c(1:5e4),]
+mcmc_trace_no_emergence_burned <- mcmc_trace_no_emergence[-c(1:5e3),]
 plot(mcmc(mcmc_trace_no_emergence_burned[
-	seq(1, nrow(mcmc_trace_no_emergence_burned), 10), -constant_which][1:2000,]))
+	seq(1, nrow(mcmc_trace_no_emergence_burned), 10), -constant_which]))
 # mcmc_trace <- as.data.table(mcmc_trace_no_emergence[-(1:3e4),])
 # mcmc_parameters <- colMeans(mcmc_trace)
 #

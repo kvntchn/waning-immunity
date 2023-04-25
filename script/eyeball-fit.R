@@ -13,8 +13,8 @@ source('script/03-initial_values.R')
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 times <- seq(from = 1, to = nrow(san_francisco.dat), by = parameters['dt'])
 R0 <- parameters['R0_high1']
-parameters['stochastic'] <- T
-parameters['emergence_rate'] <- 1e-2
+parameters['stochastic'] <- F
+parameters['emergence_rate'] <- 0
 resistant_strain_established <- F
 trajectory.ode <- as.data.frame(ode(
 	y = initial_state,
