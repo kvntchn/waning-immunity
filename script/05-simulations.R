@@ -111,4 +111,5 @@ param_grid <- expand.grid(
 # # 2023-04-23 22:22:46
 # # save(sim_output, file = 'output/sim_output.rdata')
 
-sim_output
+# Establishment probabilities
+sim_output[,.(establishment = mean(max_prev_resistant > 100)), .(emergence_rate, immune_period)]

@@ -126,7 +126,7 @@ mcmc_trace_no_emergence <- mcmc_output[[3]]
 nrow(mcmc_trace_no_emergence)
 plot(mcmc(mcmc_trace_no_emergence[
 	seq(1, nrow(mcmc_trace_no_emergence), 1e2), -constant_which]))
-mcmc_trace_no_emergence_burned <- mcmc_trace_no_emergence[-c(1:5e3),]
+mcmc_trace_no_emergence_burned <- mcmc_trace_no_emergence[-c(1:5e4),]
 plot(mcmc(mcmc_trace_no_emergence_burned[
 	seq(1, nrow(mcmc_trace_no_emergence_burned), 10), -constant_which]))
 # mcmc_trace <- as.data.table(mcmc_trace_no_emergence[-(1:3e4),])
