@@ -52,7 +52,7 @@ log_lik_traj <- function(times, data = san_francisco.dat, theta_proposed, initia
 			func = func,
 			method = "impAdams_d"
 		)$result)[1:nrow(data),]
-	}, timeout = 45 * 2, onTimeout = "warning")
+	}, timeout = 60 * 2, onTimeout = "warning")
 	rm(list = c('n_to_r', 'n_to_wt', 'R0'), envir = current_frame)
 	if (exists('traj')) {
 		Sys.sleep(0)
@@ -68,8 +68,8 @@ log_lik_traj <- function(times, data = san_francisco.dat, theta_proposed, initia
 		lincidence <- log(incidence + 1)
 		loglik <- dt((lcases - lincidence) / sqrt(
 			exp( var(data$cases) - 1 ) * exp( 2 * mean(data$cases) ) + var(data$cases)),
-								 length(lcases) - 1,
-								 log = T)
+			length(lcases) - 1,
+			log = T)
 		# cat(min(loglik), "\n")
 		return( sum( loglik + 7 ) )
 	} else {return(-Inf)}
@@ -108,15 +108,22 @@ mh_mcmc <- function(
 		hyperparam = prior_hyperparameters,
 		num_iter = 500,
 		quiet = F,
-		progress = F, acceptance_progress = F,
+		progress = F,
+		acceptance_progress = F,
 		C_0,
-		batch_size = 50) {
+		batch_size = 50,
+		beta = 0.05,
+		method = "mh_in_gibbs") {
 	# Evaluate the function `posterior` at `init`
 	post_current <- posterior(theta_proposed = init, hyperparam)
 	# Initialize variables to store the current value of theta, the
 	# vector of sample values, and the number of accepted proposals
 	theta_proposed <- theta_current <- init
-	d <- length(init[-constant_which])
+	if (method == "mh_in_gibbs") {
+		d <- length(init[-constant_which])
+	} else {
+		d <- 1
+		C_0 <- diag(exp(C_0))}
 	samples <- matrix(NA, ncol = length(init), nrow = num_iter * d)
 	colnames(samples) <- names(init)
 	accepted <- matrix(F, nrow = num_iter, ncol = d)
@@ -124,23 +131,67 @@ mh_mcmc <- function(
 	# Run the MCMC algorithm for `num_iter` iterations.
 	if (progress)        {pb <- txtProgressBar(min = 0, max = num_iter, style = 3)}
 	for (i in 1:num_iter) {
-    current_accepted <- rep(0, d)
+		current_accepted <- rep(0, d)
 		# Draw a new theta from a proposal distribution and
 		# assign this to a variable called theta_proposed.
 		# And update number of accepted proposals.
-		for (j in 1:d) {
-			theta_proposed[-constant_which][j] <- rnorm(
-				1, theta_current[-constant_which][j], exp( C_0[j] * 2 )
-			)
+		if (method == "mh_in_gibbs") {
+			for (j in 1:d) {
+				theta_proposed[-constant_which][j] <- rnorm(
+					1, theta_current[-constant_which][j], exp( C_0[j] * 2 )
+				)
+				names(theta_proposed) <- names(init)
+				# Evaluate the (log) posterior function
+				post_proposed <- posterior(theta_proposed, hyperparam)
+				log_accept <- (post_proposed - post_current)
+				# Compute the Metropolis-Hastings (log) acceptance prob
+				if (is.finite(log_accept)) {
+					if (log_accept > 0) {
+						theta_current <- theta_proposed
+						post_current  <- post_proposed
+					} else {
+						# Draw a random number uniformly-distributed between 0 and 1
+						u <- runif(1)
+						# Use the random number and the acceptance probability to
+						# determine if `theta_proposed` will be accepted.
+						if (u < exp(log_accept)) {
+							# If accepted, update
+							theta_current <- theta_proposed
+							post_current  <- post_proposed
+							# And update number of accepted proposals.
+							current_accepted[j] <- 1
+						}}}
+			}
+			# Add the current theta to the vector of samples.
+			output_index <- seq(1, num_iter * d, d)[i] + j - 1
+			samples[output_index,] <- theta_current
+		} else {
+			proposal_mean <- theta_current[-constant_which]
+			theta_proposed <- c(
+				init[constant_which],
+				MASS::mvrnorm(
+					1,
+					proposal_mean,
+					Sigma = C_0))
+			if (i > batch_size) {
+				# Draw from proposal distribution
+				theta_proposed[-constant_which] <- theta_proposed[-constant_which] * beta +
+					(1 - beta) * MASS::mvrnorm(
+						1,
+						proposal_mean,
+						Sigma = Rfast::cova(samples[1:(i - 1), -constant_which]))
+			}
 			names(theta_proposed) <- names(init)
 			# Evaluate the (log) posterior function
 			post_proposed <- posterior(theta_proposed, hyperparam)
-			log_accept <- (post_proposed - post_current)
 			# Compute the Metropolis-Hastings (log) acceptance prob
+			log_accept <- (post_proposed - post_current)
 			if (is.finite(log_accept)) {
 				if (log_accept > 0) {
 					theta_current <- theta_proposed
-					post_current  <- post_proposed
+					post_current <- post_proposed
+					# And update number of accepted proposals.
+					current_accepted <- 1
 				} else {
 					# Draw a random number uniformly-distributed between 0 and 1
 					u <- runif(1)
@@ -149,23 +200,24 @@ mh_mcmc <- function(
 					if (u < exp(log_accept)) {
 						# If accepted, update
 						theta_current <- theta_proposed
-						post_current  <- post_proposed
+						post_current <- post_proposed
 						# And update number of accepted proposals.
-						current_accepted[j] <- 1
+						current_accepted <- 1
 					}}}
-
 			# Add the current theta to the vector of samples.
-			output_index <- seq(1, num_iter * d, d)[i] + j - 1
-			samples[output_index,] <- theta_current
-
+			samples[i,] <- theta_current
 		}
 
-    accepted[i,] <- as.logical(current_accepted)
+		accepted[i,] <- as.logical(current_accepted)
+
 		if (i > 1) {
-		acceptance_rate[i,] <- colMeans(accepted[1:i,])
+			if (ncol(accepted) > 1) {
+				acceptance_rate[i,] <- colMeans(accepted[1:i,])
+			} else {acceptance_rate[i,] <- mean(accepted[1:i,])}
 		} else {acceptance_rate[i,] <- accepted[1:i,]}
-		# Update?
-		if (i %% batch_size == 0) {
+
+		# Update Gibbs in MH?
+		if ((i %% batch_size == 0) & method == "mh_in_gibbs") {
 			which_increase <- which(colMeans(accepted[(i - (batch_size - 1)):i,]) >= 0.455)
 			which_decrease <- which(colMeans(accepted[(i - (batch_size - 1)):i,]) <= 0.435)
 			C_0[which_increase]  <- C_0[which_increase] + 1 / sqrt(i / batch_size)
@@ -178,7 +230,9 @@ mh_mcmc <- function(
 				cat("Iteration:", sprintf('% 5d', i),
 						"\n\tCurrent:", theta_current[-constant_which],
 						"\n\tAcceptance count:",
-						paste0(round(sum(rowMeans(accepted[1:i,])))),
+						if (ncol(accepted) > 1) {
+							paste0(round(sum(rowMeans(accepted[1:i,]))))
+						} else {paste0(round(sum(accepted[1:i,])))},
 						"\n\t Acceptance rate:",
 						paste0(round(acceptance_rate[i,] * 100, 2),
 									 "% "),
@@ -187,7 +241,10 @@ mh_mcmc <- function(
 			}}
 		if (progress) {setTxtProgressBar(pb, i)}
 		if (acceptance_progress & i > 1) {
-			plot(1:i, cumsum( rowMeans(accepted[1:i,]) ) / (1:i),
+			plot(1:i,
+					 if (ncol(accepted) > 1) {
+					 	cumsum( rowMeans(accepted[1:i,]) ) / (1:i)
+					 	} else {cumsum( accepted[1:i,] ) / (1:i)},
 					 ylab = "Acceptance rate",
 					 ylim = c(0, 0.6), xlim = c(0, i + 10))
 			text(i + 8, 0.55,
@@ -197,5 +254,5 @@ mh_mcmc <- function(
 		}
 		# i <- i + 1
 	}
-	return(list(accepted, acceptance_rate, samples, C_0))
+	return(list(accepted = accepted, acceptance_rate = acceptance_rate, samples = samples, proposal_sd = C_0))
 }

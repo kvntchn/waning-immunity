@@ -106,35 +106,50 @@ proposal_sd <- c(
 	loosen_factor4 = 0.5,
 	NULL
 )
+
+# # Metropolis in Gibbs
+# mcmc_output <- mh_mcmc(
+# 	posterior = log_post_wrapper,
+# 	init = parameters,
+# 	constant_which = constant_which,
+# 	num_iter = 2.5e3,
+# 	progress = F,
+# 	C_0 = log(proposal_sd / 10),
+# 	acceptance_progress = T,
+# 	batch_size = 100
+# 	)
+# # save(mcmc_output, file = 'output/mcmc_output_metro-in-gibbs.rdata')
+
+# Adaptive MH
 mcmc_output <- mh_mcmc(
 	posterior = log_post_wrapper,
 	init = parameters,
 	constant_which = constant_which,
-	num_iter = 2.5e3,
-	progress = F,
-	C_0 = log(proposal_sd / 10),
-	acceptance_progress = T,
-	batch_size = 100
+	num_iter = 5.5e4,
+	progress = T,
+	C_0 = log(proposal_sd / 2.38),
+	acceptance_progress = F,
+	batch_size = 10,
+	method = "mh"
 	)
-# save(mcmc_output, file = 'output/mcmc_output_metro-in-gibbs.rdata')
+save(mcmc_output, file = 'output/mcmc_output_mh.rdata')
 
-# # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# # ODE using parameter estimates from MCMC
-# # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# # load('output/mcmc_output_metro-in-gibbs.rdata')
-mcmc_trace_no_emergence <- mcmc_output[[3]]
-nrow(mcmc_trace_no_emergence)
-plot(mcmc(mcmc_trace_no_emergence[
-	seq(1, nrow(mcmc_trace_no_emergence), 1e2), -constant_which]))
-mcmc_trace_no_emergence_burned <- mcmc_trace_no_emergence[-c(1:5e4),]
-plot(mcmc(mcmc_trace_no_emergence_burned[
-	seq(1, nrow(mcmc_trace_no_emergence_burned), 10), -constant_which]))
-# mcmc_trace <- as.data.table(mcmc_trace_no_emergence[-(1:3e4),])
-# mcmc_parameters <- colMeans(mcmc_trace)
-#
-# # Initial parameters vs mcmc fit
-# data.frame(
-# 	prior_mean = parameters,
-# 	fitted = mcmc_parameters
-# )
-#
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ODE using parameter estimates from MCMC
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# load('output/mcmc_output_metro-in-gibbs.rdata')
+# load('output/mcmc_output_mh.rdata')
+mcmc_trace <- mcmc_output[[3]]
+nrow(mcmc_trace)
+# plot(mcmc(mcmc_trace[seq(1, nrow(mcmc_trace), 1e2), -constant_which]))
+mcmc_trace_burned <- mcmc_trace[-c(1:(nrow(mcmc_trace)/2)),]
+# plot(mcmc(mcmc_trace_burned[seq(1, nrow(mcmc_trace_burned), 10), -constant_which]))
+
+mcmc_trace <- as.data.table(mcmc_trace[-(1:(nrow(mcmc_trace)/2)),])
+mcmc_parameters <- colMeans(mcmc_trace)
+
+# Initial parameters vs mcmc fit
+data.frame(
+	prior_mean = parameters[-constant_which],
+	fitted = mcmc_parameters[-constant_which]
+)
