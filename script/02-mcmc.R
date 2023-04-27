@@ -52,7 +52,7 @@ log_lik_traj <- function(times, data = san_francisco.dat, theta_proposed, initia
 			func = func,
 			method = "impAdams_d"
 		)$result)[1:nrow(data),]
-	}, timeout = 60 * 2, onTimeout = "warning")
+	}, timeout = 60 * 3, onTimeout = "warning")
 	rm(list = c('n_to_r', 'n_to_wt', 'R0'), envir = current_frame)
 	if (exists('traj')) {
 		Sys.sleep(0)
@@ -123,6 +123,7 @@ mh_mcmc <- function(
 		d <- length(init[-constant_which])
 	} else {
 		d <- 1
+		d_mh <- length(init[-constant_which])
 		C_0 <- diag(exp(C_0))}
 	samples <- matrix(NA, ncol = length(init), nrow = num_iter * d)
 	colnames(samples) <- names(init)
@@ -169,17 +170,20 @@ mh_mcmc <- function(
 			proposal_mean <- theta_current[-constant_which]
 			theta_proposed <- c(
 				init[constant_which],
-				MASS::mvrnorm(
-					1,
-					proposal_mean,
-					Sigma = C_0))
+				MASS::mvrnorm(1, proposal_mean, Sigma = C_0))
 			if (i > batch_size) {
 				# Draw from proposal distribution
-				theta_proposed[-constant_which] <- theta_proposed[-constant_which] * beta +
-					(1 - beta) * MASS::mvrnorm(
+				u <- runif(1)
+				if (u > beta) {
+					theta_proposed[-constant_which] <- MASS::mvrnorm(
 						1,
 						proposal_mean,
-						Sigma = Rfast::cova(samples[1:(i - 1), -constant_which]))
+						Sigma = Rfast::cova(samples[1:(i - 1), -constant_which]) * 2.38^2 / d_mh)
+				} else {
+					theta_proposed[-constant_which] <- MASS::mvrnorm(
+						1,
+						proposal_mean,
+						Sigma = C_0)}
 			}
 			names(theta_proposed) <- names(init)
 			# Evaluate the (log) posterior function
@@ -244,7 +248,7 @@ mh_mcmc <- function(
 			plot(1:i,
 					 if (ncol(accepted) > 1) {
 					 	cumsum( rowMeans(accepted[1:i,]) ) / (1:i)
-					 	} else {cumsum( accepted[1:i,] ) / (1:i)},
+					 } else {cumsum( accepted[1:i,] ) / (1:i)},
 					 ylab = "Acceptance rate",
 					 ylim = c(0, 0.6), xlim = c(0, i + 10))
 			text(i + 8, 0.55,

@@ -40,6 +40,8 @@ compartmental_model <- function(time, state = initial_state, parameters, parent_
 		R0_low <- approxfun(
 			time_varying_parameters[,c(1, 5)], method = 'linear', rule = 2)
 
+		if (!exists("R0", envir = parent_frame)) {assign("R0", 0, envir = parent_frame)}
+
 		if ((I_wt + I_r + I_rV) > (N / tighten_factor(time)) &
 				get('R0', envir = parent_frame) > 1) {
 			assign('R0', R0_low(time), envir = parent_frame)

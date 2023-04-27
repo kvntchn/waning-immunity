@@ -120,19 +120,19 @@ proposal_sd <- c(
 # 	)
 # # save(mcmc_output, file = 'output/mcmc_output_metro-in-gibbs.rdata')
 
-# Adaptive MH
-mcmc_output <- mh_mcmc(
-	posterior = log_post_wrapper,
-	init = parameters,
-	constant_which = constant_which,
-	num_iter = 5.5e4,
-	progress = T,
-	C_0 = log(proposal_sd / 2.38),
-	acceptance_progress = F,
-	batch_size = 10,
-	method = "mh"
-	)
-save(mcmc_output, file = 'output/mcmc_output_mh.rdata')
+# # Adaptive MH
+# mcmc_output <- mh_mcmc(
+# 	posterior = log_post_wrapper,
+# 	init = parameters,
+# 	constant_which = constant_which,
+# 	num_iter = 5.5e4,
+# 	progress = T,
+# 	C_0 = log(proposal_sd / 2.38),
+# 	acceptance_progress = F,
+# 	batch_size = 100,
+# 	method = "mh"
+# 	)
+# save(mcmc_output, file = 'output/mcmc_output_mh.rdata')
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # ODE using parameter estimates from MCMC
@@ -141,9 +141,9 @@ save(mcmc_output, file = 'output/mcmc_output_mh.rdata')
 # load('output/mcmc_output_mh.rdata')
 mcmc_trace <- mcmc_output[[3]]
 nrow(mcmc_trace)
-# plot(mcmc(mcmc_trace[seq(1, nrow(mcmc_trace), 1e2), -constant_which]))
-mcmc_trace_burned <- mcmc_trace[-c(1:(nrow(mcmc_trace)/2)),]
-# plot(mcmc(mcmc_trace_burned[seq(1, nrow(mcmc_trace_burned), 10), -constant_which]))
+plot(mcmc(mcmc_trace[seq(1, nrow(mcmc_trace), 5), -constant_which]))
+mcmc_trace_burned <- mcmc_trace[-c(1:(nrow(mcmc_trace)/3)),]
+plot(mcmc(mcmc_trace_burned[seq(1, nrow(mcmc_trace_burned), 5), -constant_which]))
 
 mcmc_trace <- as.data.table(mcmc_trace[-(1:(nrow(mcmc_trace)/2)),])
 mcmc_parameters <- colMeans(mcmc_trace)
