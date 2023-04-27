@@ -140,16 +140,20 @@ proposal_sd <- c(
 # load('output/mcmc_output_metro-in-gibbs.rdata')
 # load('output/mcmc_output_mh.rdata')
 mcmc_trace <- mcmc_output[[3]]
+mcmc_trace <- mcmc_trace[
+	apply(mcmc_trace[,grep('R0', colnames(mcmc_trace), value = T)], 1, function(x) {all(x > 1e-3)}),]
 nrow(mcmc_trace)
 plot(mcmc(mcmc_trace[seq(1, nrow(mcmc_trace), 5), -constant_which]))
-mcmc_trace_burned <- mcmc_trace[-c(1:(nrow(mcmc_trace)/3)),]
-plot(mcmc(mcmc_trace_burned[seq(1, nrow(mcmc_trace_burned), 5), -constant_which]))
+mcmc_trace_burned <- mcmc_trace[-c(1:(nrow(mcmc_trace)/5)),]
+plot(mcmc(mcmc_trace_burned[seq(1, nrow(mcmc_trace_burned), 20), -constant_which]))
 
-mcmc_trace <- as.data.table(mcmc_trace[-(1:(nrow(mcmc_trace)/2)),])
-mcmc_parameters <- colMeans(mcmc_trace)
+mcmc_trace <- as.data.table(mcmc_trace[-(1:(nrow(mcmc_trace)/5)),])
+mcmc_parameters_median <- apply(mcmc_trace, 2, quantile, 0.5)
+mcmc_parameters_mode <- apply(mcmc_trace, 2, function(x) {x[which.max(density(x)$y)]})
 
 # Initial parameters vs mcmc fit
 data.frame(
-	prior_mean = parameters[-constant_which],
-	fitted = mcmc_parameters[-constant_which]
-)
+	prior_mean = parameters,
+	posterior_median = mcmc_parameters_median,
+	posterior_mode = mcmc_parameters_mode
+)[-constant_which,]
