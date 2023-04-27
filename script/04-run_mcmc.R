@@ -156,4 +156,6 @@ data.frame(
 	prior_mean = parameters,
 	posterior_median = mcmc_parameters_median,
 	posterior_mode = mcmc_parameters_mode
-)[-constant_which,]
+) -> parameters_estimates
+
+save(parameters_estimates, file = "output/parameters_estimates.rdata")
