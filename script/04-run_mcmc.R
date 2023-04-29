@@ -19,6 +19,11 @@ transform_parameters <- function(parameters) {
 		parameters[grep("R0_high|loosen_factor|tighten_factor", names(parameters))] - 1
 	return(parameters)
 }
+inverse_transform_parameters <- function(parameters) {
+	parameters[grep("R0_high|loosen_factor|tighten_factor", names(parameters))] <-
+		parameters[grep("R0_high|loosen_factor|tighten_factor", names(parameters))] + 1
+	return(parameters)
+}
 constant_which <- 1:grep("emergence_date", names(parameters))
 d <- length(parameters[-constant_which])
 prior_mean <- transform_parameters(parameters[-constant_which])
@@ -154,8 +159,8 @@ mcmc_parameters_mode <- apply(mcmc_trace_burned_thinned, 2, function(x) {x[which
 # Initial parameters vs mcmc fit
 data.frame(
 	prior_mean = parameters,
-	posterior_median = mcmc_parameters_median,
-	posterior_mode = mcmc_parameters_mode
+	posterior_median = inverse_transform_parameters(mcmc_parameters_median),
+	posterior_mode = inverse_transform_parameters(mcmc_parameters_mode)
 ) -> parameters_estimates
 parameters_estimates
 # save(parameters_estimates, file = "output/parameters_estimates.rdata")
