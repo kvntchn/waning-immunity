@@ -125,7 +125,7 @@ proposal_sd <- c(
 # 	posterior = log_post_wrapper,
 # 	init = parameters,
 # 	constant_which = constant_which,
-# 	num_iter = 5.5e4,
+# 	num_iter = 2e5,
 # 	progress = T,
 # 	C_0 = log(proposal_sd / 2.38),
 # 	acceptance_progress = F,
@@ -143,7 +143,7 @@ mcmc_trace <- mcmc_output[[3]]
 mcmc_trace <- mcmc_trace[
 	apply(mcmc_trace[,grep('R0', colnames(mcmc_trace), value = T)], 1, function(x) {all(x > 1e-3)}),]
 nrow(mcmc_trace)
-plot(mcmc(mcmc_trace[seq(1, nrow(mcmc_trace), 5), -constant_which]))
+plot(mcmc(mcmc_trace[seq(1, nrow(mcmc_trace), 20), -constant_which]))
 mcmc_trace_burned <- mcmc_trace[-c(1:(nrow(mcmc_trace)/5)),]
 plot(mcmc(mcmc_trace_burned[seq(1, nrow(mcmc_trace_burned), 20), -constant_which]))
 
@@ -157,5 +157,5 @@ data.frame(
 	posterior_median = mcmc_parameters_median,
 	posterior_mode = mcmc_parameters_mode
 ) -> parameters_estimates
-
-save(parameters_estimates, file = "output/parameters_estimates.rdata")
+parameters_estimates
+# save(parameters_estimates, file = "output/parameters_estimates.rdata")

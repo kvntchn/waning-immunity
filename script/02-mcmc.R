@@ -171,6 +171,11 @@ mh_mcmc <- function(
 			theta_proposed <- c(
 				init[constant_which],
 				MASS::mvrnorm(1, proposal_mean, Sigma = C_0))
+			while (any(theta_proposed[grep("R0|loosen", names(init))] < 1e-3)) {
+				theta_proposed <- c(
+					init[constant_which],
+				MASS::mvrnorm(1, proposal_mean, Sigma = C_0))
+			}
 			if (i > batch_size) {
 				# Draw from proposal distribution
 				u <- runif(1)
