@@ -113,3 +113,19 @@ param_grid <- expand.grid(
 
 # Establishment probabilities
 sim_output[,.(establishment = mean(max_prev_resistant > 100) * 100), .(emergence_rate, immune_period)]
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Simulations at different parameter values
+load(file = "output/parameters_estimates.rdata")
+# Change param_grid as necessary
+param_grid
+sim_output <- rbindlist(apply(param_grid, 1, function(param) {
+	cat("Emergence rate:", param[[1]], "\n");
+	cat("Immune period:", param[[2]], "\n");
+	get_sims(1e3,
+					 test_emergence_rate = param[[1]], test_immune_period = param[[2]],
+					 # Change here ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+					 param = parameters_estimates$posterior_median)
+}))
+# save(sim_output, file = 'output/sim_output.rdata')
