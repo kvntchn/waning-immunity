@@ -157,6 +157,7 @@ mcmc_parameters_median <- apply(mcmc_trace_burned_thinned, 2, median)
 mcmc_parameters_mode <- apply(mcmc_trace_burned_thinned, 2, function(x) {
 	dens <- density(x)
 	dens$x[which.max(dens$y)]})
+mcmc_parameters_mode[constant_which] <- mcmc_parameters_median[constant_which]
 
 # Initial parameters vs mcmc fit
 data.frame(
